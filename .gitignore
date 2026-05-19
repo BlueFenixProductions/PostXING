@@ -2,3 +2,6 @@
 refasm/
 net20ref.nupkg
 ilspy-*.log
+
+# macOS Finder metadata
+.DS_Store
