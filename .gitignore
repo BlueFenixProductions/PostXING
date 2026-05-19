@@ -1,0 +1,4 @@
+# Re-fetchable decompiler inputs — not part of the recovered artifact
+refasm/
+net20ref.nupkg
+ilspy-*.log

@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <AssemblyName>PostXING.MetaBlogProvider</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <UseWindowsForms>True</UseWindowsForms>
+    <TargetFramework>net20</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>14.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Reference Include="PostXING.Controls">
+      <HintPath>../../bin-staged/PostXING.Controls.dll</HintPath>
+    </Reference>
+    <Reference Include="PostXING.Components">
+      <HintPath>../../bin-staged/PostXING.Components.dll</HintPath>
+    </Reference>
+    <Reference Include="CookComputing.XmlRpc">
+      <HintPath>../../bin-staged/CookComputing.XmlRpc.dll</HintPath>
+    </Reference>
+    <Reference Include="PostXING.Extensibility">
+      <HintPath>../../bin-staged/PostXING.Extensibility.dll</HintPath>
+    </Reference>
+    <Reference Include="Genghis">
+      <HintPath>../../bin-staged/Genghis.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
