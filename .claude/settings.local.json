@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Service -Name TermService, SessionEnv, UmRdpService, sshd, ssh-agent -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 22, 3389 } | Select-Object LocalAddress, LocalPort, OwningProcess | Format-Table -AutoSize)",
+      "PowerShell(\\(Get-ItemProperty 'HKLM:\\\\System\\\\CurrentControlSet\\\\Control\\\\Terminal Server' -Name fDenyTSConnections -ErrorAction SilentlyContinue\\).fDenyTSConnections)",
+      "PowerShell($ts = Get-Command tailscale -ErrorAction SilentlyContinue; if \\($ts\\) { & $ts.Source status } else { 'tailscale CLI not found on PATH' })"
+    ]
+  }
+}
