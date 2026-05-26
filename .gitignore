@@ -10,3 +10,4 @@ ilspy-*.log
 # Per-developer agent skills (installed via `npx skills add`, refetchable)
 .agents/
 .claude/skills/
+/src/PostXING/.vs

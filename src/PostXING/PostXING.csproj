@@ -15,7 +15,6 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
     <RootNamespace />
   </PropertyGroup>
-  <ItemGroup />
   <ItemGroup>
     <Reference Include="PostXING.Controls">
       <HintPath>../../bin-staged/PostXING.Controls.dll</HintPath>
@@ -38,6 +37,7 @@
     <Reference Include="System.Deployment">
       <HintPath>../../refasm/net20/System.Deployment.dll</HintPath>
     </Reference>
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml">
       <HintPath>../../refasm/net20/System.Xml.dll</HintPath>
     </Reference>
