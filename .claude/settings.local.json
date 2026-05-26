@@ -5,7 +5,29 @@
       "PowerShell(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 22, 3389 } | Select-Object LocalAddress, LocalPort, OwningProcess | Format-Table -AutoSize)",
       "PowerShell(\\(Get-ItemProperty 'HKLM:\\\\System\\\\CurrentControlSet\\\\Control\\\\Terminal Server' -Name fDenyTSConnections -ErrorAction SilentlyContinue\\).fDenyTSConnections)",
       "PowerShell($ts = Get-Command tailscale -ErrorAction SilentlyContinue; if \\($ts\\) { & $ts.Source status } else { 'tailscale CLI not found on PATH' })",
-      "Bash(ls \"C:/Users/Chris/Documents/GitHub/\" 2>&1)"
+      "Bash(ls \"C:/Users/Chris/Documents/GitHub/\" 2>&1)",
+      "PowerShell($dotnet = Get-Command dotnet -ErrorAction SilentlyContinue; if \\($dotnet\\) { \"dotnet: $\\($dotnet.Source\\)\"; dotnet --version; \"---SDKs---\"; dotnet --list-sdks; \"---Runtimes---\"; dotnet --list-runtimes } else { \"dotnet not found on PATH\" })",
+      "Bash(ls ~/.claude/ 2>&1 | head -50)",
+      "Read(//c/Users/Chris/.claude/**)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const s=JSON.parse\\(fs.readFileSync\\('/c/Users/Chris/.claude/settings.json','utf8'\\)\\); console.log\\(JSON.stringify\\({enabledPlugins:s.enabledPlugins, plugins:s.plugins, agents:s.agents},null,2\\)\\);\")",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:claudemarketplaces.com)",
+      "Bash(npx --version)",
+      "Bash(npx --yes skills add https://github.com/vercel-labs/skills --skill find-skills)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(npx --yes skills find dotnet)",
+      "Bash(npx --yes skills find csharp)",
+      "Bash(npx --yes skills find msbuild)",
+      "Bash(npx --yes skills find winforms)",
+      "Bash(npx --yes skills find decompil)",
+      "Bash(npx --yes skills find nuget)",
+      "Bash(npx --yes skills find \"dotnet framework\")",
+      "Bash(npx --yes skills add aaronontheweb/dotnet-skills@ilspy-decompile -g -y)",
+      "Bash(npx --yes skills add dotnet/skills@msbuild-modernization -g -y)",
+      "Bash(npx --yes skills add dotnet/skills@msbuild-antipatterns -g -y)",
+      "Bash(npx --yes skills add github/awesome-copilot@dotnet-best-practices -g -y)"
     ]
   }
 }
