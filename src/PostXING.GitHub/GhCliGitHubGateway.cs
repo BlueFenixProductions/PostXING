@@ -119,6 +119,58 @@ public sealed class GhCliGitHubGateway(ILogger<GhCliGitHubGateway> log, string g
         return doc.RootElement.GetProperty("mergeCommit").GetProperty("oid").GetString() ?? string.Empty;
     }
 
+    public async Task<IReadOnlyList<string>> ListMarkdownFilesAsync(string owner, string repo, string branch, string pathPrefix, CancellationToken ct = default)
+    {
+        var (exit, stdout, stderr) = await RunAsync(
+            ["api", $"repos/{owner}/{repo}/git/trees/{branch}?recursive=1"],
+            stdin: null, ct);
+        if (exit != 0) throw GhException($"list tree {branch}", exit, stderr);
+
+        using var doc = JsonDocument.Parse(stdout);
+        if (!doc.RootElement.TryGetProperty("tree", out var tree) || tree.ValueKind != JsonValueKind.Array)
+            return Array.Empty<string>();
+
+        var result = new List<string>();
+        foreach (var entry in tree.EnumerateArray())
+        {
+            if (entry.GetProperty("type").GetString() != "blob") continue;
+            var path = entry.GetProperty("path").GetString();
+            if (path is null) continue;
+            if (!path.StartsWith(pathPrefix, StringComparison.Ordinal)) continue;
+            if (!path.EndsWith(".md", StringComparison.OrdinalIgnoreCase)) continue;
+            result.Add(path);
+        }
+        result.Sort(StringComparer.Ordinal);
+        return result;
+    }
+
+    public async Task<GhAuthStatus> CheckAuthAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var (exit, stdout, stderr) = await RunAsync(["auth", "status"], stdin: null, ct);
+            var combined = string.IsNullOrEmpty(stdout) ? stderr : stdout;
+            if (exit != 0)
+                return new GhAuthStatus(false, null, combined.Trim());
+
+            string? user = null;
+            foreach (var line in combined.Split('\n'))
+            {
+                var idx = line.IndexOf("account ", StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) continue;
+                var tail = line[(idx + "account ".Length)..].Trim();
+                var space = tail.IndexOf(' ');
+                user = space > 0 ? tail[..space] : tail;
+                break;
+            }
+            return new GhAuthStatus(true, user, combined.Trim());
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return new GhAuthStatus(false, null, "gh CLI not on PATH");
+        }
+    }
+
     public async Task ConfigureBranchProtectionAsync(string owner, string repo, string branch, BranchProtectionRules rules, CancellationToken ct = default)
     {
         var payload = BuildProtectionPayload(rules);

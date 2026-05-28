@@ -28,4 +28,8 @@ public interface IGitHubGateway
     Task<PullRequestStatus> GetPullRequestStatusAsync(string owner, string repo, int prNumber, CancellationToken ct = default);
     Task<string> MergePullRequestAsync(string owner, string repo, int prNumber, MergeStrategy strategy, CancellationToken ct = default);
     Task ConfigureBranchProtectionAsync(string owner, string repo, string branch, BranchProtectionRules rules, CancellationToken ct = default);
+    Task<IReadOnlyList<string>> ListMarkdownFilesAsync(string owner, string repo, string branch, string pathPrefix, CancellationToken ct = default);
+    Task<GhAuthStatus> CheckAuthAsync(CancellationToken ct = default);
 }
+
+public sealed record GhAuthStatus(bool IsAuthenticated, string? Username, string Detail);

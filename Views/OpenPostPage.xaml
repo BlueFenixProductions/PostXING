@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PostXING.App.ViewModels"
+             x:Class="PostXING.App.Views.OpenPostPage"
+             x:DataType="vm:OpenPostViewModel"
+             x:Name="ThisPage"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+             Shell.NavBarIsVisible="False"
+             Title="Open post">
+    <Grid RowDefinitions="Auto,*,Auto" Padding="16">
+        <HorizontalStackLayout Grid.Row="0" Spacing="12">
+            <Label Text="Open post" FontSize="18" TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
+            <Button Text="Refresh" Command="{Binding RefreshCommand}" />
+        </HorizontalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Paths}" SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                    <Grid Padding="8,4">
+                        <Label Text="{Binding .}" FontSize="13" TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}">
+                            <Label.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Path=BindingContext.SelectCommand, Source={x:Reference ThisPage}}" CommandParameter="{Binding .}" />
+                            </Label.GestureRecognizers>
+                        </Label>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <HorizontalStackLayout Grid.Row="2" Spacing="12" HorizontalOptions="End">
+            <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Muted}" FontSize="11" VerticalOptions="Center" />
+            <Button Text="Cancel" Command="{Binding CancelCommand}" />
+        </HorizontalStackLayout>
+    </Grid>
+</ContentPage>

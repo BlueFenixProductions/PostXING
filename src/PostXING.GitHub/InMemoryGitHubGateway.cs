@@ -48,4 +48,19 @@ public sealed class InMemoryGitHubGateway : IGitHubGateway
 
     public Task ConfigureBranchProtectionAsync(string owner, string repo, string branch, BranchProtectionRules rules, CancellationToken ct = default)
         => Task.CompletedTask;
+
+    public Task<IReadOnlyList<string>> ListMarkdownFilesAsync(string owner, string repo, string branch, string pathPrefix, CancellationToken ct = default)
+    {
+        var list = _files
+            .Where(kvp => kvp.Key.owner == owner && kvp.Key.repo == repo && kvp.Key.branch == branch
+                          && kvp.Key.path.StartsWith(pathPrefix, StringComparison.Ordinal)
+                          && kvp.Key.path.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+            .Select(kvp => kvp.Key.path)
+            .OrderBy(p => p, StringComparer.Ordinal)
+            .ToList();
+        return Task.FromResult<IReadOnlyList<string>>(list);
+    }
+
+    public Task<GhAuthStatus> CheckAuthAsync(CancellationToken ct = default)
+        => Task.FromResult(new GhAuthStatus(true, "test-user", "in-memory gateway"));
 }
