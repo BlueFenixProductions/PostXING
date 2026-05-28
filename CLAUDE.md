@@ -14,22 +14,33 @@ This repository previously held a recovered decompilation of PostXING v2 from 20
 - **GitHub integration: `gh` CLI shell-out, not Octokit.** See `src/PostXING.GitHub/GhCliGitHubGateway.cs`. The `gh` binary is the runtime dependency; the user runs `gh auth login` once and the app inherits the credential. No PAT storage in-app, no `Octokit` package reference.
 - **YAGNI.** Don't add abstractions, alternative backends, future-platform hooks, or "we might want X later" scaffolding. If the user wants a new capability, they'll ask.
 
-## Run
+## Run / build / test from the repo root
+
+All four of these work no-args from the root:
 
 ```powershell
-dotnet run
+dotnet run                 # launches the App
+dotnet build               # builds the App csproj + its referenced libs
+bun dev                    # alias for `dotnet run`           (npm run dev also works)
+bun test                   # runs all tests via the slnx       (npm run test also works)
 ```
 
-That's it — from the repo root. The runnable App csproj lives at the repo root (`PostXING.App.csproj`); the .NET CLI picks it up automatically. Launch profile `PostXING` is wired in `Properties/launchSettings.json` for F5 in VS / Rider / VS Code C# Dev Kit.
+`bun build` / `npm run build` runs `dotnet build solution/PostXING4.slnx -c Release`, which builds the whole graph (App + libs + tests) and is what you want for CI parity.
 
-The libraries `Compile Remove="src\**"` exclude is in the App csproj precisely so this layout works — the root project doesn't sweep up sibling project trees. Don't remove that exclude block.
+### Why this layout
 
-## Build / Test
+The .NET CLI errors with MSB1011 if there are both a `.csproj` and a `.slnx` in the CWD, except `dotnet run` which has special csproj-finding logic. To make `dotnet run` AND `dotnet build` both work no-args at the root, the slnx had to move to `solution/PostXING4.slnx`. The `package.json` scripts wrap the slnx-required commands (`dotnet test`, full-graph builds) so `bun test` and `bun dev` work transparently.
+
+Don't move the slnx back to root — it breaks `dotnet build` and `dotnet run`. Don't remove the `<Compile Remove="src\**" />` block in `PostXING.App.csproj` — without it the root csproj sweeps up sibling project sources.
+
+## CI / explicit slnx invocations
+
+For CI scripts or when you want the full-graph build/test explicitly:
 
 ```powershell
-dotnet restore PostXING4.slnx
-dotnet build PostXING4.slnx -c Release
-dotnet test PostXING4.slnx -c Release
+dotnet restore solution/PostXING4.slnx
+dotnet build   solution/PostXING4.slnx -c Release
+dotnet test    solution/PostXING4.slnx -c Release
 ```
 
 Requires `maui-windows` workload: `dotnet workload install maui-windows`.

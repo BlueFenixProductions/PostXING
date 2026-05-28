@@ -40,13 +40,13 @@ jobs:
           restore-keys: nuget-${{ runner.os }}-
 
       - name: Restore
-        run: dotnet restore PostXING4.slnx
+        run: dotnet restore solution/PostXING4.slnx
 
       - name: Build
-        run: dotnet build PostXING4.slnx -c Release --no-restore
+        run: dotnet build solution/PostXING4.slnx -c Release --no-restore
 
       - name: Test
-        run: dotnet test PostXING4.slnx -c Release --no-build --collect:"XPlat Code Coverage" --logger "trx"
+        run: dotnet test solution/PostXING4.slnx -c Release --no-build --collect:"XPlat Code Coverage" --logger "trx"
 
       - name: Upload test results
         if: always()
