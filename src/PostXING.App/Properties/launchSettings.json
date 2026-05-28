@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "PostXING": {
+      "commandName": "Project",
+      "nativeDebugging": false,
+      "workingDirectory": "$(ProjectDir)"
+    },
+    "PostXING (Release)": {
+      "commandName": "Project",
+      "nativeDebugging": false,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Production"
+      }
+    }
+  }
+}

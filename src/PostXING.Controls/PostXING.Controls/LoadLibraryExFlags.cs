@@ -1,9 +1,0 @@
-namespace PostXING.Controls;
-
-public enum LoadLibraryExFlags
-{
-	DONT_RESOLVE_DLL_REFERENCES = 1,
-	LOAD_LIBRARY_AS_DATAFILE = 2,
-	LOAD_WITH_ALTERED_SEARCH_PATH = 8,
-	LOAD_IGNORE_CODE_AUTHZ_LEVEL = 0x10
-}

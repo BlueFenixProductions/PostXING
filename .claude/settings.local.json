@@ -27,7 +27,14 @@
       "Bash(npx --yes skills add aaronontheweb/dotnet-skills@ilspy-decompile -g -y)",
       "Bash(npx --yes skills add dotnet/skills@msbuild-modernization -g -y)",
       "Bash(npx --yes skills add dotnet/skills@msbuild-antipatterns -g -y)",
-      "Bash(npx --yes skills add github/awesome-copilot@dotnet-best-practices -g -y)"
+      "Bash(npx --yes skills add github/awesome-copilot@dotnet-best-practices -g -y)",
+      "Bash(dotnet --list-sdks)",
+      "Bash(dotnet workload *)",
+      "Bash(git rm *)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet sln *)",
+      "Bash(dotnet restore *)",
+      "Bash(dotnet test *)"
     ]
   }
 }

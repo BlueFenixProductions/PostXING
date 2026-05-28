@@ -4,63 +4,73 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A recovered build of **PostXING v2**, a 2007 WinForms blog editor, reconstructed from compiled DLLs via ILSpy decompilation. The source under `src/` is *decompiler output that has been coaxed back into compiling*, not the original source the author shipped. Treat odd-looking constructs (synthesized field names, helper classes named `<>c__DisplayClass…`, unused locals, redundant casts) as decompiler residue rather than design intent.
+**PostXING 4.0** — a greenfield .NET 10 MAUI rewrite of the spirit of the original 2007 WinForms blog editor. Targets a Markdown + GitHub + static-site-generator workflow rather than the original XML-RPC MetaWeblog flow. Published by **Blue Fenix Productions LLC**; reverse-DNS app identity is `net.bluefenix.postxing`.
 
-The end goal is a project that compiles, runs, and can then be incrementally cleaned up. See `HANDOFF.md` for the most recent session state — it is the canonical pickup document and is updated each session.
+This repository previously held a recovered decompilation of PostXING v2 from 2007. That work was shelved on 2026-05-28 and the entire `src/`, `bin-staged/`, `refasm/`, and net20 build infrastructure were removed; the history of that effort remains in git up to commit `ca2ab1c`. Do not attempt to revive the decompilation — the goal here is the new product.
+
+## Branch model
+
+- `main` — production. Operator-push only. PRs from `stage` only. Linear history required.
+- `stage` — pre-production integration. PRs from `px-modernized`. Coverage gate.
+- `px-modernized` — active integration branch (analogous to "develop" in the standard three-tier model). Feature branches merge here.
+- `post/<slug>-<date>` — short-lived branches created by the app itself for individual blog posts (see `GitHubPublishService`).
+
+The MAUI app never pushes directly to `stage` or `main`.
 
 ## Build
 
-The repo is SDK-style csprojs targeting `net20` (.NET Framework 2.0). **No .NET 2.0 runtime is required on the build host** — reference assemblies are supplied via the `Microsoft.NETFramework.ReferenceAssemblies` meta-package (auto-pulled by the SDK for any net20 TFM) plus hand-extracted DLLs under `refasm/net20/` for assemblies that NuGet package does not cover (notably `System.Deployment`, `System.Web`, `System.Design`, `System.Xml`).
-
-There is no solution file. Build the entry-point project; the others get pulled in by reference:
-
 ```powershell
-dotnet build src\PostXING\PostXING.csproj
+dotnet restore PostXING4.slnx
+dotnet build PostXING4.slnx -c Release
+dotnet test PostXING4.slnx -c Release --filter "Category!=Integration"
 ```
 
-### The NuGet restore quirk
+The MAUI App (`src/PostXING.App`) requires the `maui-windows` and `maccatalyst` workloads. Check with `dotnet workload list`; install with `dotnet workload install maui` (meta-workload) or the individual `maui-windows` / `maccatalyst` workloads.
 
-On hosts with restrictive `packageSourceMapping` enabled globally, restore fails with `NU1100: Unable to resolve 'Microsoft.NETFramework.ReferenceAssemblies'`. The repo-root `nuget.config` works around this by registering the repo root itself as a local NuGet source and claiming the `Microsoft.NETFramework.ReferenceAssemblies*` pattern. **`net20ref.nupkg` (the `Microsoft.NETFramework.ReferenceAssemblies.net20` package) must exist at the repo root** for restore to succeed — it is gitignored as a refetchable input, so a fresh clone needs it dropped back in before the first build.
+## Project layout
 
-### Reference assemblies are gitignored
+```
+src/
+  PostXING.Core/       net10.0 — domain model, no framework deps
+  PostXING.GitHub/     net10.0 — IGitHubGateway, Octokit adapter, publish workflow
+  PostXING.Markdown/   net10.0 — YAML front matter + Markdig rendering
+  PostXING.App/        net10.0-windows + net10.0-maccatalyst — MAUI presentation
+tests/
+  PostXING.Core.Tests/
+  PostXING.GitHub.Tests/
+  PostXING.Markdown.Tests/
+  (PostXING.App.Tests — TODO. ViewModels currently live in PostXING.App which
+   targets MAUI TFMs; a plain net10.0 test project cannot reference it. Two
+   ways to unblock: (a) extract ViewModels into a new PostXING.ViewModels
+   net10.0 project, or (b) target PostXING.App.Tests to net10.0-windows10.0.x.
+   Prefer (a) — keeps ViewModels framework-free.)
+```
 
-`refasm/` is in `.gitignore` as "re-fetchable decompiler inputs". A fresh clone will not build until that directory is repopulated with .NET 2.0 reference DLLs (hand-extracted from a `Microsoft.NETFramework.ReferenceAssemblies.net20` install or from a machine with the .NET 2.0 SDK targeting pack).
+Central package versions in `Directory.Packages.props`. Shared build properties in `Directory.Build.props`. SDK pinned in `global.json` to .NET 10.
 
-### Staged binaries
+## Identity / packaging
 
-`bin-staged/` holds the original compiled DLLs that decompilation came from. Inter-project references in the csprojs point at these DLLs (e.g. `PostXING.csproj` references `bin-staged/PostXING.Components.dll`) rather than at the sibling projects directly. This was the bootstrapping move: it lets each project compile against a *known-good* binary of its dependencies while their source is still being made to compile. Once everything compiles cleanly, this should migrate to `<ProjectReference>` and `bin-staged/` can go away — but until then, **do not delete `bin-staged/`** and be aware that fixing a compile error in, say, `PostXING.Components` does not propagate to consumers until you rebuild it and either let the next build pick up the new output or update the HintPath.
+- `ApplicationId` = `net.bluefenix.postxing` (Windows + macCatalyst share the unversioned reverse-DNS identity)
+- `<Company>` = `Blue Fenix Productions LLC`
+- MSIX `Publisher` = `CN=Blue Fenix Productions LLC` (placeholder — must be replaced with the full subject DN of the actual code-signing cert before shipping; CA-issued CN+O+L+S+C must match byte-for-byte)
+- Apple Developer Team = Blue Fenix Productions LLC (organization account, D-U-N-S required)
 
-## Project layout and dependency graph
+## Hard rules
 
-Six csproj files under `src/`, all `net20`, all WinForms (`Microsoft.NET.Sdk.WindowsDesktop`) except `PostXING.Components` which is plain `Microsoft.NET.Sdk`:
+- **Never propose uninstalling any Visual Studio install, Build Tools install, or VS-installer-managed component.** Carry-over from the prior project, still applies.
+- **`.ps1` files written via the Write tool must be ASCII-only.** Windows PowerShell 5.1 misdecodes BOM-less UTF-8; if a script needs a non-ASCII character, use a `[char]` escape.
+- **Do not fabricate confident-sounding .NET / Windows internals lore.** The user has 25 years of C# and an ASP MVP from ~2004-2007. "I don't know, want me to check?" is the right move.
+- **Don't recommend blanket reformats with `dotnet format` or CSharpier without asking** — partial formatting churn is worse than no formatting. The repo opts into CSharpier on build; one-shot mass formatting passes should still be confirmed.
+- **TDD discipline** — for new feature work, the convention is red -> green -> refactor. Tests live in `tests/`. Frameworks: xUnit v3 (or v2 if v3 isn't GA on your toolchain), Shouldly (not FluentAssertions — the latter relicensed to Xceed Community in 2024 and is no longer OSI), NSubstitute, Verify.Xunit, coverlet.
 
-- **`PostXING.Components`** — leaf. References `System.Web`, `System.Xml`. Plain class library.
-- **`PostXING.Controls`** — WinForms controls. References Components (via bin-staged), plus third-party `TabControlEX`, `CodeHtmler`, `Genghis`, `System.Design`. Embeds `.bmp` resources (MozBar, navigation icons) with explicit `LogicalName` mappings — these matter for runtime resource resolution; don't rename without updating both sides.
-- **`PostXING.Extensibility`** — plugin SPI. References Components + Controls.
-- **`PostXING.MetaBlogProvider`** — XML-RPC blog backend. References Components, Controls, Extensibility, plus `CookComputing.XmlRpc`.
-- **`PostXING`** — the WinForms app (`OutputType=WinExe`, `app.ico`). References all four libraries above plus `Genghis`, `edtftpnet-1.1.8`, `blogExtension`, `System.Deployment`, `System.Xml`. Empty `<RootNamespace />` — folder names under `src/PostXING/` (`PostXING.Forms`, `PostXING.Dialogs`, `PostXING.NavigationPages`, etc.) are organizational; namespaces come from the source files themselves.
-- **`blogExtension`** — small helper. Currently declares `<TargetFramework>net10</TargetFramework>` which is almost certainly a decompilation artifact (should likely be `net20`); flag this if you touch it.
+## License notes on excluded packages
 
-Third-party dependencies live as opaque DLLs in `bin-staged/` (`Genghis`, `CodeHtmler`, `CookComputing.XmlRpc`, `TabControlEX`, `edtftpnet-1.1.8`). These were not decompiled and are referenced as-is.
+These were considered and **deliberately rejected** during scaffolding (re-check before adding):
+- `FluentAssertions` >= 8 — Xceed Community License, restricts commercial use -> use `Shouldly`
+- `MediatR` >= 12.4 — paid for commercial use -> use plain DI handlers
+- `AutoMapper` >= 14 — paid for commercial use -> hand-write mappings
+- `Moq` — SponsorLink telemetry concern -> use `NSubstitute`
 
-## Repo-specific conventions and gotchas
+## Pickup
 
-- **All csprojs set `LangVersion=14.0`** despite targeting `net20`. This is intentional — it lets the decompiled source use modern C# syntactic sugar (expression-bodied members, `out var`, etc.) without changing the TFM. Don't "fix" this by lowering `LangVersion` to match the framework.
-- **`GenerateAssemblyInfo=False`** is set everywhere because the decompiled source already contains `[assembly: …]` attributes; letting the SDK generate them would cause duplicates.
-- **`CheckForOverflowUnderflow=False`** is set everywhere to match the original build's checked-arithmetic behavior.
-- **`AllowUnsafeBlocks=True`** is set everywhere even though most projects don't use `unsafe` — decompiler precaution.
-- `.resx` files at `src/PostXING/PostXING.Forms.EditorForm.resx` (etc.) live alongside their containing folder rather than inside it. The MSBuild defaults pick them up by filename matching; don't restructure without checking that the resource discovery still works.
-
-## Hard rules (from prior session memory)
-
-- **Never propose uninstalling any Visual Studio install, Build Tools install, or VS-installer-managed component** on any machine. Hard rule. The .NET Framework Dev/Targeting Packs older than 4.8 are an exception that was already authorized and executed; do not generalize from that.
-- **`.ps1` files written via the Write tool must be ASCII-only.** Windows PowerShell 5.1 misdecodes BOM-less UTF-8 and the resulting parser errors are misleading. If the script needs a non-ASCII character, use a `[char]` escape.
-- **Do not fabricate confident-sounding .NET / Windows internals lore.** The user has 25 years of C# and an ASP MVP from ~2004-2007; they will catch invented dependency claims. "I don't know, want me to check?" is the right move.
-- **Code is not "done" until the linter/formatter has run with `--fix`.** For `.ps1`, that also means a parse check. Don't recommend C# formatters (dotnet format, etc.) without asking first — this codebase's formatting is decompiler-shaped and a blanket reformat would create enormous noise.
-
-## Files at the repo root worth knowing about
-
-- `HANDOFF.md` — session-handoff log. Read first if returning to this project; update at end of session.
-- `Dockerfile` — record of a jettisoned Windows-container build path. Image no longer exists; the file is kept for history. The forward path is a Hyper-V Win11 VM, not Docker.
-- `cleanup-europa.ps1`, `cleanup-fx-old.ps1` — one-shot host cleanup scripts already executed against the build host. **History, not for re-execution as-is.** `cleanup-europa.ps1` has a known bug where the generic uninstall-flag-soup fallback breaks on SQL Server's `setup.exe`.
-- `ilspy-*.log` — empty log files from the original ILSpy decompilation pass. Gitignored.
+This file is the canonical pickup document. The session that pivoted the repo (2026-05-28) deleted the entire decompiled v2 tree and bootstrapped the .NET 10 MAUI scaffold on `px-modernized`. The next session should be able to run `dotnet restore PostXING4.slnx` cleanly; if not, that is the first thing to fix.

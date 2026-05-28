@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PostXING.App.ViewModels"
+             x:Class="PostXING.App.Views.EditorPage"
+             x:DataType="vm:EditorViewModel"
+             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+             Shell.NavBarIsVisible="False">
+    <Grid RowDefinitions="*,Auto">
+        <Editor Grid.Row="0"
+                Text="{Binding RawMarkdown, Mode=TwoWay}"
+                AutoSize="TextChanges"
+                BackgroundColor="Transparent"
+                TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}"
+                FontSize="18"
+                Margin="96,64"
+                Placeholder="Start writing..."
+                PlaceholderColor="{StaticResource Muted}" />
+
+        <HorizontalStackLayout Grid.Row="1" Padding="16,8" Spacing="24" HorizontalOptions="End">
+            <Label Text="{Binding WordCount, StringFormat='{0} words'}" FontSize="11" TextColor="{StaticResource Muted}" />
+            <Label Text="{Binding ReadingTimeMinutes, StringFormat='{0} min read'}" FontSize="11" TextColor="{StaticResource Muted}" />
+        </HorizontalStackLayout>
+    </Grid>
+</ContentPage>

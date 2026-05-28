@@ -1,13 +1,39 @@
-# Re-fetchable decompiler inputs — not part of the recovered artifact
-refasm/
-net20ref.nupkg
-ilspy-*.log
-**/obj/
+# Build output
 **/bin/
-# macOS Finder metadata
-.DS_Store
+**/obj/
+**/AppPackages/
+**/BundleArtifacts/
+**/GeneratedArtifacts/
+**/.vs/
+**/.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
 
-# Per-developer agent skills (installed via `npx skills add`, refetchable)
+# Test / coverage
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# MAUI / Xamarin
+*.binlog
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+
+# Claude-managed (per-developer, refetchable)
 .agents/
 .claude/skills/
-/src/PostXING/.vs
