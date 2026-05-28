@@ -151,7 +151,8 @@ public sealed partial class EditorViewModel : ObservableObject
                 $"draft: true\n" +
                 $"tags: []\n" +
                 $"description: \n" +
-                $"---\n\n";
+                $"---\n\n" +
+                $"# {title}\n\n";
             IsDirty = false;
         }
         finally { _seeding = false; }
