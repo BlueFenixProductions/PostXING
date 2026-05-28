@@ -12,51 +12,78 @@
             <Setter Property="TextColor" Value="{StaticResource Muted}" />
             <Setter Property="VerticalOptions" Value="Center" />
         </Style>
-        <Style TargetType="Label" x:Key="StatusLink" BasedOn="{StaticResource StatusLabel}">
-        </Style>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="*,Auto">
-        <Editor Grid.Row="0"
-                Text="{Binding RawMarkdown, Mode=TwoWay}"
-                AutoSize="TextChanges"
-                BackgroundColor="Transparent"
-                TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}"
-                FontSize="14"
-                Margin="2"
-                Placeholder="Start writing..."
-                PlaceholderColor="{StaticResource Muted}" />
+    <Grid>
+        <Grid RowDefinitions="*,Auto">
+            <Editor Grid.Row="0"
+                    Text="{Binding RawMarkdown, Mode=TwoWay}"
+                    AutoSize="TextChanges"
+                    BackgroundColor="Transparent"
+                    TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}"
+                    FontSize="14"
+                    Margin="2"
+                    Placeholder="Start writing..."
+                    PlaceholderColor="{StaticResource Muted}" />
 
-        <Grid Grid.Row="1" Padding="6,4" ColumnDefinitions="Auto,*,Auto">
-            <HorizontalStackLayout Grid.Column="0" Spacing="12">
-                <Label Style="{StaticResource StatusLink}" Text="New">
-                    <Label.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding NewPostCommand}" />
-                    </Label.GestureRecognizers>
-                </Label>
-                <Label Style="{StaticResource StatusLink}" Text="Open">
-                    <Label.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding OpenPostCommand}" />
-                    </Label.GestureRecognizers>
-                </Label>
-                <Label Style="{StaticResource StatusLink}" Text="Settings">
-                    <Label.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding SettingsCommand}" />
-                    </Label.GestureRecognizers>
-                </Label>
-                <Label Style="{StaticResource StatusLink}" Text="Publish" IsVisible="{Binding IsDirty}">
-                    <Label.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding PublishCommand}" />
-                    </Label.GestureRecognizers>
-                </Label>
-            </HorizontalStackLayout>
+            <Grid Grid.Row="1" Padding="6,4" ColumnDefinitions="Auto,*,Auto">
+                <HorizontalStackLayout Grid.Column="0" Spacing="12">
+                    <Label Style="{StaticResource StatusLabel}" Text="New">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NewPostCommand}" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                    <Label Style="{StaticResource StatusLabel}" Text="Open">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenPostCommand}" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                    <Label Style="{StaticResource StatusLabel}" Text="Settings">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding SettingsCommand}" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                    <Label Style="{StaticResource StatusLabel}" Text="Publish" IsVisible="{Binding IsDirty}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding PublishCommand}" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                </HorizontalStackLayout>
 
-            <HorizontalStackLayout Grid.Column="2" Spacing="16">
-                <Label Style="{StaticResource StatusLabel}" Text="{Binding CurrentPath}" />
-                <Label Style="{StaticResource StatusLabel}" Text="{Binding WordCount, StringFormat='{0} words'}" />
-                <Label Style="{StaticResource StatusLabel}" Text="{Binding ReadingTimeMinutes, StringFormat='{0} min'}" />
-                <Label Style="{StaticResource StatusLabel}" Text="{Binding GhAuthStatus}" />
-            </HorizontalStackLayout>
+                <HorizontalStackLayout Grid.Column="2" Spacing="16">
+                    <Label Style="{StaticResource StatusLabel}" Text="{Binding CurrentPath}" />
+                    <Label Style="{StaticResource StatusLabel}" Text="{Binding WordCount, StringFormat='{0} words'}" />
+                    <Label Style="{StaticResource StatusLabel}" Text="{Binding ReadingTimeMinutes, StringFormat='{0} min'}" />
+                    <Label Style="{StaticResource StatusLabel}" Text="{Binding GhAuthStatus}" />
+                </HorizontalStackLayout>
+            </Grid>
+        </Grid>
+
+        <!-- Title prompt overlay -->
+        <Grid IsVisible="{Binding ShowTitlePrompt}"
+              BackgroundColor="{AppThemeBinding Light=#80000000, Dark=#A0000000}">
+            <Border StrokeThickness="0"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                    Padding="32"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center"
+                    MaximumWidthRequest="480"
+                    StrokeShape="RoundRectangle 6,6,6,6">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="What are we writing about?" FontSize="20"
+                           TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
+                    <Entry Placeholder="Title" Text="{Binding PromptTitle}" FontSize="16">
+                        <Entry.Behaviors>
+                            <!-- Empty behavior list reserved for future Enter-key handling -->
+                        </Entry.Behaviors>
+                    </Entry>
+                    <Entry Placeholder="Author (optional)" Text="{Binding PromptAuthor}" FontSize="14" />
+                    <HorizontalStackLayout Spacing="12" HorizontalOptions="End">
+                        <Button Text="Cancel" Command="{Binding CancelTitlePromptCommand}" />
+                        <Button Text="Start writing" Command="{Binding ConfirmTitlePromptCommand}" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
         </Grid>
     </Grid>
 </ContentPage>

@@ -39,6 +39,15 @@ public sealed partial class EditorViewModel : ObservableObject
     [ObservableProperty]
     private string _ghAuthStatus = "gh ?";
 
+    [ObservableProperty]
+    private bool _showTitlePrompt;
+
+    [ObservableProperty]
+    private string _promptTitle = string.Empty;
+
+    [ObservableProperty]
+    private string _promptAuthor = string.Empty;
+
     private bool _seeding;
 
     public string PreviewHtml => _renderer.RenderHtml(RawMarkdown);
@@ -60,7 +69,7 @@ public sealed partial class EditorViewModel : ObservableObject
         _settings = settings;
         _clock = clock;
 
-        SeedNewPost();
+        BeginNewPost();
         _ = RefreshAuthAsync();
     }
 
@@ -87,6 +96,7 @@ public sealed partial class EditorViewModel : ObservableObject
             CurrentPath = path;
             RawMarkdown = contents;
             IsDirty = false;
+            ShowTitlePrompt = false;
         }
         finally { _seeding = false; }
     }
@@ -102,7 +112,7 @@ public sealed partial class EditorViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void NewPost() => SeedNewPost();
+    private void NewPost() => BeginNewPost();
 
     [RelayCommand]
     private void OpenPost() => OpenPostRequested?.Invoke(this, EventArgs.Empty);
@@ -120,16 +130,57 @@ public sealed partial class EditorViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
-    private void SeedNewPost()
+    [RelayCommand]
+    private async Task ConfirmTitlePromptAsync()
     {
+        var title = PromptTitle?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(title)) return;
+
+        var author = PromptAuthor?.Trim() ?? string.Empty;
         var today = DateOnly.FromDateTime(_clock.GetUtcNow().UtcDateTime);
+
         _seeding = true;
         try
         {
             CurrentPath = "(new)";
-            RawMarkdown = $"---\ntitle: \"\"\ndate: {today:yyyy-MM-dd}\ntags: []\ndraft: true\ndescription: \n---\n\n";
+            RawMarkdown =
+                $"---\n" +
+                $"title: \"{EscapeYamlString(title)}\"\n" +
+                (string.IsNullOrEmpty(author) ? string.Empty : $"author: \"{EscapeYamlString(author)}\"\n") +
+                $"date: {today:yyyy-MM-dd}\n" +
+                $"draft: true\n" +
+                $"tags: []\n" +
+                $"description: \n" +
+                $"---\n\n";
             IsDirty = false;
         }
         finally { _seeding = false; }
+
+        ShowTitlePrompt = false;
+
+        if (!string.IsNullOrEmpty(author) && author != _settings.Current.AuthorName)
+        {
+            await _settings.SaveAsync(_settings.Current with { AuthorName = author });
+        }
     }
+
+    [RelayCommand]
+    private void CancelTitlePrompt() => ShowTitlePrompt = false;
+
+    private void BeginNewPost()
+    {
+        PromptTitle = string.Empty;
+        PromptAuthor = _settings.Current.AuthorName ?? string.Empty;
+        _seeding = true;
+        try
+        {
+            CurrentPath = "(new)";
+            RawMarkdown = string.Empty;
+            IsDirty = false;
+        }
+        finally { _seeding = false; }
+        ShowTitlePrompt = true;
+    }
+
+    private static string EscapeYamlString(string s) => s.Replace("\"", "\\\"");
 }

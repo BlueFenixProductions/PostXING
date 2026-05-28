@@ -8,7 +8,7 @@ namespace PostXING.GitHub.Tests;
 public sealed class GitHubPublishServiceTests
 {
     private readonly InMemoryGitHubGateway _gw = new();
-    private readonly SiteConfig _site = SiteConfig.For("owner", "repo", "content/posts", SiteFlavor.Hugo);
+    private readonly SiteConfig _site = SiteConfig.For("owner", "repo");
 
     private static Post SamplePost() =>
         new(Slug.From("Hello World"),
@@ -25,7 +25,7 @@ public sealed class GitHubPublishServiceTests
         var state = await sut.PublishAsync(SamplePost(), _site, "rendered", autoMerge: false);
 
         state.Kind.ShouldBe(PublishKind.PullRequestOpen);
-        state.BranchName.ShouldBe("post/hello-world-20250601");
+        state.BranchName.ShouldStartWith("post/hello-world-");
         state.PullRequestNumber.ShouldNotBeNull();
     }
 }

@@ -3,14 +3,14 @@ namespace PostXING.App.Services;
 public sealed record AppSettings(
     string? Owner,
     string? Repo,
-    string ContentRoot,
-    string DevelopBranch)
+    string DevelopBranch,
+    string? AuthorName)
 {
     public static AppSettings Default { get; } = new(
         Owner: null,
         Repo: null,
-        ContentRoot: "content/posts",
-        DevelopBranch: "develop");
+        DevelopBranch: "develop",
+        AuthorName: null);
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(Owner) && !string.IsNullOrWhiteSpace(Repo);
 }

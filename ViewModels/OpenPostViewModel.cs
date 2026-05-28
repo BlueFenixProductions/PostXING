@@ -37,12 +37,15 @@ public sealed partial class OpenPostViewModel : ObservableObject
 
         IsBusy = true;
         Paths.Clear();
-        StatusMessage = $"Listing {s.Owner}/{s.Repo}@{s.DevelopBranch}:{s.ContentRoot}...";
+        StatusMessage = $"Listing {s.Owner}/{s.Repo}@{s.DevelopBranch}...";
         try
         {
-            var files = await _gateway.ListMarkdownFilesAsync(s.Owner!, s.Repo!, s.DevelopBranch, s.ContentRoot);
-            foreach (var f in files) Paths.Add(f);
-            StatusMessage = files.Count == 0 ? "No .md files found." : $"{files.Count} files";
+            var posts = await _gateway.ListMarkdownFilesAsync(s.Owner!, s.Repo!, s.DevelopBranch, "posts/");
+            var drafts = await _gateway.ListMarkdownFilesAsync(s.Owner!, s.Repo!, s.DevelopBranch, "drafts/");
+            foreach (var f in drafts) Paths.Add(f);
+            foreach (var f in posts) Paths.Add(f);
+            var total = drafts.Count + posts.Count;
+            StatusMessage = total == 0 ? "No .md files in posts/ or drafts/." : $"{drafts.Count} drafts, {posts.Count} posts";
         }
         catch (Exception ex)
         {
