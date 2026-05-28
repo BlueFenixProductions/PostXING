@@ -44,6 +44,11 @@
                             <TapGestureRecognizer Command="{Binding SettingsCommand}" />
                         </Label.GestureRecognizers>
                     </Label>
+                    <Label Style="{StaticResource StatusLabel}" Text="Save" IsVisible="{Binding IsDirty}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding SaveCommand}" />
+                        </Label.GestureRecognizers>
+                    </Label>
                     <Label Style="{StaticResource StatusLabel}" Text="Publish" IsVisible="{Binding IsDirty}">
                         <Label.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding PublishCommand}" />
@@ -52,6 +57,7 @@
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Grid.Column="2" Spacing="16">
+                    <Label Style="{StaticResource StatusLabel}" Text="{Binding SaveStatus}" />
                     <Label Style="{StaticResource StatusLabel}" Text="{Binding CurrentPath}" />
                     <Label Style="{StaticResource StatusLabel}" Text="{Binding WordCount, StringFormat='{0} words'}" />
                     <Label Style="{StaticResource StatusLabel}" Text="{Binding ReadingTimeMinutes, StringFormat='{0} min'}" />

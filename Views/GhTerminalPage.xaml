@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PostXING.App.ViewModels"
+             x:Class="PostXING.App.Views.GhTerminalPage"
+             x:DataType="vm:GhTerminalViewModel"
+             BackgroundColor="#0A0F0A"
+             Shell.NavBarIsVisible="False"
+             Title="gh">
+    <Grid RowDefinitions="Auto,*,Auto,Auto,Auto" Padding="12" RowSpacing="8">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <Label Grid.Column="0" Text="gh terminal" FontFamily="HackBold" FontSize="14" TextColor="#7FE07F" VerticalOptions="Center" />
+            <Button Grid.Column="1" Text="Clear" Command="{Binding ClearCommand}" BackgroundColor="#1A2A1A" TextColor="#A0E0A0" FontFamily="HackRegular" />
+            <Button Grid.Column="2" Text="Close" Command="{Binding CloseCommand}" BackgroundColor="#1A2A1A" TextColor="#A0E0A0" FontFamily="HackRegular" />
+        </Grid>
+
+        <ScrollView Grid.Row="1" BackgroundColor="#0F140F">
+            <Label Text="{Binding OutputText}" FontFamily="HackRegular" FontSize="12"
+                   TextColor="#C0E0C0" Padding="12" />
+        </ScrollView>
+
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+            <Label Grid.Column="0" Text="$ gh" FontFamily="HackBold" FontSize="13" TextColor="#7FE07F" VerticalOptions="Center" />
+            <Entry Grid.Column="1" Text="{Binding Command}"
+                   FontFamily="HackRegular" FontSize="13"
+                   BackgroundColor="#0F140F" TextColor="#E0F0E0"
+                   Placeholder="auth status" PlaceholderColor="#508050" />
+            <Button Grid.Column="2" Text="Run" Command="{Binding RunCommand}"
+                    BackgroundColor="#2A4A2A" TextColor="#E0F0E0" FontFamily="HackBold" />
+        </Grid>
+
+        <Editor Grid.Row="3" Text="{Binding Stdin}" AutoSize="TextChanges"
+                FontFamily="HackRegular" FontSize="12"
+                BackgroundColor="#0F140F" TextColor="#C0E0C0"
+                Placeholder="optional stdin (paste a PAT here before running &quot;auth login --with-token&quot;)"
+                PlaceholderColor="#508050"
+                HeightRequest="60" />
+
+        <HorizontalStackLayout Grid.Row="4" Spacing="12">
+            <Label Text="Docs:" FontFamily="HackRegular" FontSize="11" TextColor="#7FA07F" VerticalOptions="Center" />
+            <Label Text="https://cli.github.com/manual/" FontFamily="HackRegular" FontSize="11" TextColor="#7FE0E0" VerticalOptions="Center" />
+        </HorizontalStackLayout>
+    </Grid>
+</ContentPage>

@@ -22,7 +22,7 @@ public partial class EditorPage : ContentPage
     {
         base.OnAppearing();
         var pending = _box.Take();
-        if (pending is not null) _vm.LoadPost(pending.Path, pending.Contents);
+        if (pending is not null) _vm.LoadPost(pending.Handle, pending.Contents);
         _ = _vm.RefreshAuthAsync();
     }
 }

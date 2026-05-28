@@ -13,6 +13,7 @@ public sealed partial class EditorViewModel : ObservableObject
     private readonly IMarkdownRenderer _renderer;
     private readonly IGitHubGateway _gateway;
     private readonly ISettingsStore _settings;
+    private readonly ILocalPostStore _local;
     private readonly TimeProvider _clock;
 
     [ObservableProperty]
@@ -48,6 +49,10 @@ public sealed partial class EditorViewModel : ObservableObject
     [ObservableProperty]
     private string _promptAuthor = string.Empty;
 
+    [ObservableProperty]
+    private string _saveStatus = string.Empty;
+
+    private PostHandle _handle = PostHandle.NewDraft;
     private bool _seeding;
 
     public string PreviewHtml => _renderer.RenderHtml(RawMarkdown);
@@ -61,12 +66,14 @@ public sealed partial class EditorViewModel : ObservableObject
         IMarkdownRenderer renderer,
         IGitHubGateway gateway,
         ISettingsStore settings,
+        ILocalPostStore local,
         TimeProvider clock)
     {
         _parser = parser;
         _renderer = renderer;
         _gateway = gateway;
         _settings = settings;
+        _local = local;
         _clock = clock;
 
         BeginNewPost();
@@ -88,15 +95,17 @@ public sealed partial class EditorViewModel : ObservableObject
         }
     }
 
-    public void LoadPost(string path, string contents)
+    public void LoadPost(PostHandle handle, string contents)
     {
         _seeding = true;
         try
         {
-            CurrentPath = path;
+            _handle = handle;
+            CurrentPath = handle.DisplayName;
             RawMarkdown = contents;
             IsDirty = false;
             ShowTitlePrompt = false;
+            SaveStatus = string.Empty;
         }
         finally { _seeding = false; }
     }
@@ -121,7 +130,44 @@ public sealed partial class EditorViewModel : ObservableObject
     private void Settings() => SettingsRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand(CanExecute = nameof(IsDirty))]
-    private Task SaveAsync() => Task.CompletedTask;
+    private async Task SaveAsync()
+    {
+        try
+        {
+            switch (_handle.Source)
+            {
+                case PostSource.LocalFile:
+                    await _local.WriteAsync(_handle.Identifier, RawMarkdown);
+                    IsDirty = false;
+                    SaveStatus = $"Saved {Path.GetFileName(_handle.Identifier)}";
+                    break;
+
+                case PostSource.New:
+                    var folder = _settings.Current.LocalFolder;
+                    if (string.IsNullOrWhiteSpace(folder))
+                    {
+                        SaveStatus = "Set a local folder in Settings first.";
+                        return;
+                    }
+                    var slug = Slug.From(string.IsNullOrWhiteSpace(FrontMatter.Title) ? "untitled" : FrontMatter.Title);
+                    var fullPath = Path.Combine(folder, "drafts", $"{slug.Value}.md");
+                    await _local.WriteAsync(fullPath, RawMarkdown);
+                    _handle = PostHandle.FromLocalPath(fullPath);
+                    CurrentPath = _handle.DisplayName;
+                    IsDirty = false;
+                    SaveStatus = $"Saved draft as {Path.GetFileName(fullPath)}";
+                    break;
+
+                case PostSource.GitHub:
+                    SaveStatus = "Saving GitHub-backed posts is not wired yet. Use the gh terminal to commit.";
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            SaveStatus = $"Save failed: {ex.Message}";
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(IsDirty))]
     private Task PublishAsync()
@@ -142,6 +188,7 @@ public sealed partial class EditorViewModel : ObservableObject
         _seeding = true;
         try
         {
+            _handle = PostHandle.NewDraft;
             CurrentPath = "(new)";
             RawMarkdown =
                 $"---\n" +
@@ -153,7 +200,8 @@ public sealed partial class EditorViewModel : ObservableObject
                 $"description: \n" +
                 $"---\n\n" +
                 $"# {title}\n\n";
-            IsDirty = false;
+            IsDirty = true;
+            SaveStatus = string.Empty;
         }
         finally { _seeding = false; }
 
@@ -175,9 +223,11 @@ public sealed partial class EditorViewModel : ObservableObject
         _seeding = true;
         try
         {
+            _handle = PostHandle.NewDraft;
             CurrentPath = "(new)";
             RawMarkdown = string.Empty;
             IsDirty = false;
+            SaveStatus = string.Empty;
         }
         finally { _seeding = false; }
         ShowTitlePrompt = true;

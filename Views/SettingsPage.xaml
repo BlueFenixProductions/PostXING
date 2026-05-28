@@ -8,30 +8,39 @@
              Shell.NavBarIsVisible="False"
              Title="Settings">
     <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="600" HorizontalOptions="Center">
+        <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="720" HorizontalOptions="Center">
             <Label Text="Settings" FontSize="22" TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
 
-            <Label Text="Repository" FontSize="11" TextColor="{StaticResource Muted}" />
+            <Label Text="Local posts folder" FontSize="11" TextColor="{StaticResource Muted}" />
+            <Entry Placeholder="C:\path\to\your\posts" Text="{Binding LocalFolder}" />
+            <Label Text="Where you keep your .md files locally. Use your own git client to commit and push." FontSize="11" TextColor="{StaticResource Muted}" />
+
+            <BoxView HeightRequest="1" Color="{StaticResource Muted}" Opacity="0.3" Margin="0,8" />
+
+            <Label Text="GitHub repository (optional)" FontSize="11" TextColor="{StaticResource Muted}" />
             <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
                 <Entry Grid.Column="0" Placeholder="owner" Text="{Binding Owner}" />
                 <Label Grid.Column="1" Text="/" VerticalOptions="Center" TextColor="{StaticResource Muted}" />
                 <Entry Grid.Column="2" Placeholder="repo" Text="{Binding Repo}" />
             </Grid>
-            <Label Text="Posts and drafts live in fixed top-level folders posts/ and drafts/." FontSize="11" TextColor="{StaticResource Muted}" />
-
             <Label Text="Integration branch" FontSize="11" TextColor="{StaticResource Muted}" />
             <Entry Placeholder="develop" Text="{Binding DevelopBranch}" />
+
+            <BoxView HeightRequest="1" Color="{StaticResource Muted}" Opacity="0.3" Margin="0,8" />
 
             <Label Text="Author (default for new posts)" FontSize="11" TextColor="{StaticResource Muted}" />
             <Entry Placeholder="Your name" Text="{Binding AuthorName}" />
 
             <BoxView HeightRequest="1" Color="{StaticResource Muted}" Opacity="0.3" Margin="0,8" />
 
-            <Label Text="GitHub authentication" FontSize="11" TextColor="{StaticResource Muted}" />
-            <Label Text="{Binding GhAuthDetail}" FontSize="12" TextColor="{StaticResource Muted}" />
-            <Button Text="Re-check gh auth" Command="{Binding CheckAuthCommand}" HorizontalOptions="Start" />
+            <Label Text="GitHub CLI" FontSize="11" TextColor="{StaticResource Muted}" />
+            <Label Text="{Binding GhAuthDetail}" FontSize="12" FontFamily="HackRegular" TextColor="{StaticResource Muted}" />
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="Open gh terminal" Command="{Binding OpenTerminalCommand}" />
+                <Button Text="Re-check status" Command="{Binding CheckAuthCommand}" />
+            </HorizontalStackLayout>
             <Label FontSize="11" TextColor="{StaticResource Muted}"
-                   Text="PAT is managed by the gh CLI. To add one: open cmd and run&#10;&#10;    echo YOUR_PAT | gh auth login --with-token&#10;&#10;Then click Re-check above." />
+                   Text="The gh terminal lets you run gh CLI commands without leaving the app. You don't need gh installed if you only use the local folder workflow above." />
 
             <BoxView HeightRequest="1" Color="{StaticResource Muted}" Opacity="0.3" Margin="0,8" />
 

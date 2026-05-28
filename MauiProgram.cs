@@ -30,6 +30,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<GitHubPublishService>();
         builder.Services.AddSingleton(TimeProvider.System);
 
+        builder.Services.AddSingleton<ILocalPostStore, FileSystemLocalPostStore>();
         builder.Services.AddSingleton<ISettingsStore>(_ =>
         {
             var store = new FileSystemSettingsStore();
@@ -41,10 +42,12 @@ public static class MauiProgram
         builder.Services.AddTransient<EditorViewModel>();
         builder.Services.AddTransient<SettingsViewModel>();
         builder.Services.AddTransient<OpenPostViewModel>();
+        builder.Services.AddTransient<GhTerminalViewModel>();
 
         builder.Services.AddTransient<EditorPage>();
         builder.Services.AddTransient<SettingsPage>();
         builder.Services.AddTransient<OpenPostPage>();
+        builder.Services.AddTransient<GhTerminalPage>();
 
         return builder.Build();
     }
