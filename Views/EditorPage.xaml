@@ -21,6 +21,7 @@
                     AutoSize="TextChanges"
                     BackgroundColor="Transparent"
                     TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}"
+                    FontFamily="HackRegular"
                     FontSize="14"
                     Margin="2"
                     Placeholder="Start writing..."
@@ -64,25 +65,32 @@
               BackgroundColor="{AppThemeBinding Light=#80000000, Dark=#A0000000}">
             <Border StrokeThickness="0"
                     BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
-                    Padding="32"
-                    HorizontalOptions="Center"
-                    VerticalOptions="Center"
-                    MaximumWidthRequest="480"
-                    StrokeShape="RoundRectangle 6,6,6,6">
-                <VerticalStackLayout Spacing="14">
-                    <Label Text="What are we writing about?" FontSize="20"
+                    Padding="56"
+                    Margin="64"
+                    HorizontalOptions="Fill"
+                    VerticalOptions="Fill"
+                    StrokeShape="RoundRectangle 8,8,8,8">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="32">
+                    <Label Grid.Row="0" Text="What are we writing about?" FontSize="32"
                            TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
-                    <Entry Placeholder="Title" Text="{Binding PromptTitle}" FontSize="16">
-                        <Entry.Behaviors>
-                            <!-- Empty behavior list reserved for future Enter-key handling -->
-                        </Entry.Behaviors>
-                    </Entry>
-                    <Entry Placeholder="Author (optional)" Text="{Binding PromptAuthor}" FontSize="14" />
-                    <HorizontalStackLayout Spacing="12" HorizontalOptions="End">
+
+                    <VerticalStackLayout Grid.Row="1" Spacing="24" VerticalOptions="Center">
+                        <Entry Placeholder="Post title" Text="{Binding PromptTitle}"
+                               FontSize="28"
+                               HeightRequest="72"
+                               BackgroundColor="Transparent"
+                               TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
+                        <Entry Placeholder="Author (optional)" Text="{Binding PromptAuthor}"
+                               FontSize="18"
+                               BackgroundColor="Transparent"
+                               TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
+                    </VerticalStackLayout>
+
+                    <HorizontalStackLayout Grid.Row="2" Spacing="12" HorizontalOptions="End">
                         <Button Text="Cancel" Command="{Binding CancelTitlePromptCommand}" />
                         <Button Text="Start writing" Command="{Binding ConfirmTitlePromptCommand}" />
                     </HorizontalStackLayout>
-                </VerticalStackLayout>
+                </Grid>
             </Border>
         </Grid>
     </Grid>
