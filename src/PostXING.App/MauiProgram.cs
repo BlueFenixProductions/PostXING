@@ -25,7 +25,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<IFrontMatterParser, YamlFrontMatterParser>();
         builder.Services.AddSingleton<IMarkdownRenderer, MarkdigRenderer>();
-        builder.Services.AddSingleton<IGitHubGateway, InMemoryGitHubGateway>();
+        builder.Services.AddSingleton<IGitHubGateway, GhCliGitHubGateway>();
         builder.Services.AddSingleton<GitHubPublishService>();
 
         builder.Services.AddTransient<EditorViewModel>();

@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Octokit" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
   </ItemGroup>
 

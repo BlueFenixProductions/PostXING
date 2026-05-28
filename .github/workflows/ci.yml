@@ -16,10 +16,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build + Test (non-MAUI projects)
+  build:
+    name: Build + Test
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,6 +29,9 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Install MAUI workload
+        run: dotnet workload install maui-windows --skip-sign-check
+
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
@@ -36,26 +39,14 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
 
-      - name: Restore non-MAUI projects
-        run: |
-          dotnet restore src/PostXING.Core/PostXING.Core.csproj
-          dotnet restore src/PostXING.GitHub/PostXING.GitHub.csproj
-          dotnet restore src/PostXING.Markdown/PostXING.Markdown.csproj
-          dotnet restore tests/PostXING.Core.Tests/PostXING.Core.Tests.csproj
-          dotnet restore tests/PostXING.GitHub.Tests/PostXING.GitHub.Tests.csproj
-          dotnet restore tests/PostXING.Markdown.Tests/PostXING.Markdown.Tests.csproj
+      - name: Restore
+        run: dotnet restore PostXING4.slnx
 
-      - name: Build non-MAUI projects
-        run: |
-          dotnet build src/PostXING.Core/PostXING.Core.csproj -c Release --no-restore
-          dotnet build src/PostXING.GitHub/PostXING.GitHub.csproj -c Release --no-restore
-          dotnet build src/PostXING.Markdown/PostXING.Markdown.csproj -c Release --no-restore
+      - name: Build
+        run: dotnet build PostXING4.slnx -c Release --no-restore
 
       - name: Test
-        run: |
-          dotnet test tests/PostXING.Core.Tests/PostXING.Core.Tests.csproj -c Release --collect:"XPlat Code Coverage" --logger "trx;LogFileName=core.trx"
-          dotnet test tests/PostXING.GitHub.Tests/PostXING.GitHub.Tests.csproj -c Release --collect:"XPlat Code Coverage" --logger "trx;LogFileName=github.trx"
-          dotnet test tests/PostXING.Markdown.Tests/PostXING.Markdown.Tests.csproj -c Release --collect:"XPlat Code Coverage" --logger "trx;LogFileName=markdown.trx"
+        run: dotnet test PostXING4.slnx -c Release --no-build --collect:"XPlat Code Coverage" --logger "trx"
 
       - name: Upload test results
         if: always()
@@ -63,31 +54,3 @@ jobs:
         with:
           name: test-results-${{ github.run_id }}
           path: '**/TestResults/*.trx'
-
-  build-maui:
-    name: Build MAUI App (Windows)
-    runs-on: windows-latest
-    timeout-minutes: 30
-    needs: build-and-test
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
-
-      - name: Install MAUI workload
-        run: dotnet workload install maui --skip-sign-check
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: nuget-${{ runner.os }}-maui-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
-          restore-keys: nuget-${{ runner.os }}-maui-
-
-      - name: Restore App
-        run: dotnet restore src/PostXING.App/PostXING.App.csproj
-
-      - name: Build App
-        run: dotnet build src/PostXING.App/PostXING.App.csproj -c Release --no-restore

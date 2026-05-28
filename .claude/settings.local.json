@@ -34,7 +34,15 @@
       "Bash(dotnet build *)",
       "Bash(dotnet sln *)",
       "Bash(dotnet restore *)",
-      "Bash(dotnet test *)"
+      "Bash(dotnet test *)",
+      "Bash(timeout 8 dotnet run --project src/PostXING.App --no-build -c Release)",
+      "Bash(taskkill /F /IM PostXING.App.exe)",
+      "Bash(wait)",
+      "Bash(tasklist)",
+      "Bash(dotnet run *)",
+      "Bash(powershell -Command \"Get-Process PostXING.App -ErrorAction SilentlyContinue | Stop-Process -Force; if \\(\\\\$?\\) { Write-Host 'launched and killed cleanly' } else { Write-Host 'no process found' }\")",
+      "Bash(git commit *)",
+      "Bash(powershell -Command \"Get-Process PostXING.App -ErrorAction SilentlyContinue | Stop-Process -Force; if \\(\\\\$?\\) { Write-Host 'app launched and killed cleanly' } else { Write-Host 'process not found' }\")"
     ]
   }
 }
