@@ -4,6 +4,8 @@ namespace PostXING.App.Services;
 
 public sealed class FileSystemSettingsStore : ISettingsStore
 {
+    private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
+
     private readonly string _path;
     private AppSettings _current = AppSettings.Default;
 
@@ -42,7 +44,7 @@ public sealed class FileSystemSettingsStore : ISettingsStore
     {
         _current = settings;
         await using var fs = File.Create(_path);
-        await JsonSerializer.SerializeAsync(fs, settings, new JsonSerializerOptions { WriteIndented = true }, ct);
+        await JsonSerializer.SerializeAsync(fs, settings, WriteOptions, ct);
         Changed?.Invoke(this, EventArgs.Empty);
     }
 }
