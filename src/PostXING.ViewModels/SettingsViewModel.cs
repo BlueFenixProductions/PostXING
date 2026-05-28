@@ -1,9 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using PostXING.App.Services;
 using PostXING.GitHub;
 
-namespace PostXING.App.ViewModels;
+namespace PostXING.ViewModels;
 
 public sealed partial class SettingsViewModel : ObservableObject
 {

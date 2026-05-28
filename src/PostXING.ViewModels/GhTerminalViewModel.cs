@@ -3,7 +3,7 @@ using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace PostXING.App.ViewModels;
+namespace PostXING.ViewModels;
 
 public sealed partial class GhTerminalViewModel : ObservableObject
 {

@@ -1,12 +1,6 @@
-using PostXING.App.ViewModels;
+using PostXING.ViewModels;
 
 namespace PostXING.App.Services;
-
-public interface IPendingPostBox
-{
-    OpenedPost? Take();
-    void Put(OpenedPost post);
-}
 
 public sealed class PendingPostBox : IPendingPostBox
 {

@@ -1,4 +1,4 @@
-namespace PostXING.App.Services;
+namespace PostXING.ViewModels;
 
 public interface ISettingsStore
 {

@@ -1,52 +1,76 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:vm="clr-namespace:PostXING.App.ViewModels"
+             xmlns:vm="clr-namespace:PostXING.ViewModels;assembly=PostXING.ViewModels"
              x:Class="PostXING.App.Views.SettingsPage"
              x:DataType="vm:SettingsViewModel"
-             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+             BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
              Shell.NavBarIsVisible="False"
              Title="Settings">
     <ScrollView>
         <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="720" HorizontalOptions="Center">
-            <Label Text="Settings" FontSize="22" TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
 
-            <Label Text="Local posts folder" FontSize="11" TextColor="{StaticResource Muted}" />
-            <Entry Placeholder="C:\path\to\your\posts" Text="{Binding LocalFolder}" />
-            <Label Text="Where you keep your .md files locally. Use your own git client to commit and push." FontSize="11" TextColor="{StaticResource Muted}" />
+            <Label Style="{StaticResource Kicker}" Text="[ settings ]"
+                   SemanticProperties.HeadingLevel="Level1" />
 
-            <BoxView HeightRequest="1" Color="{StaticResource Muted}" Opacity="0.3" Margin="0,8" />
+            <Label Style="{StaticResource Kicker}" Text="[ local posts folder ]"
+                   SemanticProperties.HeadingLevel="Level2" />
+            <Entry Placeholder="C:\path\to\your\posts" Text="{Binding LocalFolder}"
+                   SemanticProperties.Description="Local posts folder" />
+            <Label Style="{StaticResource FieldCaption}"
+                   Text="Where you keep your .md files locally. Use your own git client to commit and push." />
 
-            <Label Text="GitHub repository (optional)" FontSize="11" TextColor="{StaticResource Muted}" />
+            <BoxView Style="{StaticResource Hairline}" />
+
+            <Label Style="{StaticResource Kicker}" Text="[ github repository (optional) ]"
+                   SemanticProperties.HeadingLevel="Level2" />
             <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
-                <Entry Grid.Column="0" Placeholder="owner" Text="{Binding Owner}" />
-                <Label Grid.Column="1" Text="/" VerticalOptions="Center" TextColor="{StaticResource Muted}" />
-                <Entry Grid.Column="2" Placeholder="repo" Text="{Binding Repo}" />
+                <Entry Grid.Column="0" Placeholder="owner" Text="{Binding Owner}"
+                       SemanticProperties.Description="GitHub repository owner" />
+                <Label Grid.Column="1" Text="/" VerticalOptions="Center"
+                       FontFamily="HackRegular"
+                       TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
+                <Entry Grid.Column="2" Placeholder="repo" Text="{Binding Repo}"
+                       SemanticProperties.Description="GitHub repository name" />
             </Grid>
-            <Label Text="Integration branch" FontSize="11" TextColor="{StaticResource Muted}" />
-            <Entry Placeholder="develop" Text="{Binding DevelopBranch}" />
+            <Label Style="{StaticResource Kicker}" Text="[ integration branch ]"
+                   SemanticProperties.HeadingLevel="Level2" />
+            <Entry Placeholder="develop" Text="{Binding DevelopBranch}"
+                   SemanticProperties.Description="GitHub integration branch" />
 
-            <BoxView HeightRequest="1" Color="{StaticResource Muted}" Opacity="0.3" Margin="0,8" />
+            <BoxView Style="{StaticResource Hairline}" />
 
-            <Label Text="Author (default for new posts)" FontSize="11" TextColor="{StaticResource Muted}" />
-            <Entry Placeholder="Your name" Text="{Binding AuthorName}" />
+            <Label Style="{StaticResource Kicker}" Text="[ author (default for new posts) ]"
+                   SemanticProperties.HeadingLevel="Level2" />
+            <Entry Placeholder="Your name" Text="{Binding AuthorName}"
+                   SemanticProperties.Description="Default author name for new posts" />
 
-            <BoxView HeightRequest="1" Color="{StaticResource Muted}" Opacity="0.3" Margin="0,8" />
+            <BoxView Style="{StaticResource Hairline}" />
 
-            <Label Text="GitHub CLI" FontSize="11" TextColor="{StaticResource Muted}" />
-            <Label Text="{Binding GhAuthDetail}" FontSize="12" FontFamily="HackRegular" TextColor="{StaticResource Muted}" />
+            <Label Style="{StaticResource Kicker}" Text="[ github cli ]"
+                   SemanticProperties.HeadingLevel="Level2" />
+            <Label Style="{StaticResource FieldCaption}" Text="{Binding GhAuthDetail}" FontFamily="HackRegular"
+                   SemanticProperties.Description="gh authentication status detail" />
             <HorizontalStackLayout Spacing="8">
-                <Button Text="Open gh terminal" Command="{Binding OpenTerminalCommand}" />
-                <Button Text="Re-check status" Command="{Binding CheckAuthCommand}" />
+                <Button Text="open gh terminal" Command="{Binding OpenTerminalCommand}"
+                        Style="{StaticResource ButtonGhost}"
+                        SemanticProperties.Description="Open gh terminal" />
+                <Button Text="re-check status" Command="{Binding CheckAuthCommand}"
+                        Style="{StaticResource ButtonGhost}"
+                        SemanticProperties.Description="Re-check gh authentication status" />
             </HorizontalStackLayout>
-            <Label FontSize="11" TextColor="{StaticResource Muted}"
+            <Label Style="{StaticResource FieldCaption}"
                    Text="The gh terminal lets you run gh CLI commands without leaving the app. You don't need gh installed if you only use the local folder workflow above." />
 
-            <BoxView HeightRequest="1" Color="{StaticResource Muted}" Opacity="0.3" Margin="0,8" />
+            <BoxView Style="{StaticResource Hairline}" />
 
             <HorizontalStackLayout Spacing="12" HorizontalOptions="End">
-                <Button Text="Cancel" Command="{Binding CancelCommand}" />
-                <Button Text="Save" Command="{Binding SaveCommand}" />
+                <Button Text="cancel" Command="{Binding CancelCommand}"
+                        Style="{StaticResource ButtonGhost}"
+                        SemanticProperties.Description="Cancel settings" />
+                <Button Text="save" Command="{Binding SaveCommand}"
+                        Style="{StaticResource ButtonPrimary}"
+                        SemanticProperties.Description="Save settings" />
             </HorizontalStackLayout>
         </VerticalStackLayout>
     </ScrollView>

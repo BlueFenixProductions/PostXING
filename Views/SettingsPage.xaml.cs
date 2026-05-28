@@ -1,4 +1,4 @@
-using PostXING.App.ViewModels;
+using PostXING.ViewModels;
 
 namespace PostXING.App.Views;
 

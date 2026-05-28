@@ -48,5 +48,6 @@
     <ProjectReference Include="src\PostXING.Core\PostXING.Core.csproj" />
     <ProjectReference Include="src\PostXING.GitHub\PostXING.GitHub.csproj" />
     <ProjectReference Include="src\PostXING.Markdown\PostXING.Markdown.csproj" />
+    <ProjectReference Include="src\PostXING.ViewModels\PostXING.ViewModels.csproj" />
   </ItemGroup>
 </Project>

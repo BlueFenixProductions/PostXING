@@ -1,11 +1,10 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using PostXING.App.Services;
 using PostXING.Core.Domain;
 using PostXING.GitHub;
 
-namespace PostXING.App.ViewModels;
+namespace PostXING.ViewModels;
 
 public sealed partial class OpenPostViewModel : ObservableObject
 {

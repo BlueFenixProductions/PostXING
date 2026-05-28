@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PostXING.App.Services;
-using PostXING.App.ViewModels;
 using PostXING.App.Views;
 using PostXING.GitHub;
 using PostXING.Markdown;
+using PostXING.ViewModels;
 
 namespace PostXING.App;
 
@@ -25,7 +25,6 @@ public static class MauiProgram
 #endif
 
         builder.Services.AddSingleton<IFrontMatterParser, YamlFrontMatterParser>();
-        builder.Services.AddSingleton<IMarkdownRenderer, MarkdigRenderer>();
         builder.Services.AddSingleton<IGitHubGateway, GhCliGitHubGateway>();
         builder.Services.AddSingleton<GitHubPublishService>();
         builder.Services.AddSingleton(TimeProvider.System);

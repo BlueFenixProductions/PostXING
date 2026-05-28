@@ -1,16 +1,14 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using PostXING.App.Services;
 using PostXING.Core.Domain;
 using PostXING.GitHub;
 using PostXING.Markdown;
 
-namespace PostXING.App.ViewModels;
+namespace PostXING.ViewModels;
 
 public sealed partial class EditorViewModel : ObservableObject
 {
     private readonly IFrontMatterParser _parser;
-    private readonly IMarkdownRenderer _renderer;
     private readonly IGitHubGateway _gateway;
     private readonly ISettingsStore _settings;
     private readonly ILocalPostStore _local;
@@ -22,7 +20,6 @@ public sealed partial class EditorViewModel : ObservableObject
     private bool _isDirty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PreviewHtml))]
     private string _rawMarkdown = string.Empty;
 
     [ObservableProperty]
@@ -55,22 +52,18 @@ public sealed partial class EditorViewModel : ObservableObject
     private PostHandle _handle = PostHandle.NewDraft;
     private bool _seeding;
 
-    public string PreviewHtml => _renderer.RenderHtml(RawMarkdown);
-
     public event EventHandler? OpenPostRequested;
     public event EventHandler? SettingsRequested;
     public event EventHandler? PublishConfirmationRequested;
 
     public EditorViewModel(
         IFrontMatterParser parser,
-        IMarkdownRenderer renderer,
         IGitHubGateway gateway,
         ISettingsStore settings,
         ILocalPostStore local,
         TimeProvider clock)
     {
         _parser = parser;
-        _renderer = renderer;
         _gateway = gateway;
         _settings = settings;
         _local = local;

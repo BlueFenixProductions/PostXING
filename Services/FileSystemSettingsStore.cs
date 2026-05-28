@@ -1,4 +1,5 @@
 using System.Text.Json;
+using PostXING.ViewModels;
 
 namespace PostXING.App.Services;
 

@@ -1,40 +1,47 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:vm="clr-namespace:PostXING.App.ViewModels"
+             xmlns:vm="clr-namespace:PostXING.ViewModels;assembly=PostXING.ViewModels"
              x:Class="PostXING.App.Views.OpenPostPage"
              x:DataType="vm:OpenPostViewModel"
              x:Name="ThisPage"
-             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+             BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
              Shell.NavBarIsVisible="False"
              Title="Open post">
-    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="16" RowSpacing="8">
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-            <Label Grid.Column="0" Text="Open post" FontSize="18" VerticalOptions="Center"
-                   TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
-            <Button Grid.Column="1" Text="Settings" Command="{Binding OpenSettingsCommand}" />
-        </Grid>
+    <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="8">
+        <Label Grid.Row="0" Style="{StaticResource Kicker}" Text="[ open post ]"
+               SemanticProperties.HeadingLevel="Level1" />
 
-        <Label Grid.Row="1" Text="{Binding StatusMessage}" FontSize="11" TextColor="{StaticResource Muted}" />
-
-        <CollectionView Grid.Row="2" ItemsSource="{Binding Entries}" SelectionMode="None">
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Entries}" SelectionMode="None"
+                        SemanticProperties.Description="Available posts">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:PostEntry">
                     <Grid Padding="8,4" ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <Label Grid.Column="0" Text="{Binding DisplayName}" FontSize="13" FontFamily="HackRegular"
-                               TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}">
+                               TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}">
                             <Label.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding Path=BindingContext.SelectCommand, Source={x:Reference ThisPage}}" CommandParameter="{Binding .}" />
                             </Label.GestureRecognizers>
                         </Label>
-                        <Label Grid.Column="1" Text="{Binding Tag}" FontSize="11" TextColor="{StaticResource Muted}" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{Binding Tag}" FontSize="11" FontFamily="HackRegular"
+                               CharacterSpacing="2"
+                               TextColor="{AppThemeBinding Light={StaticResource Paper600}, Dark={StaticResource Paper500}}"
+                               VerticalOptions="Center" />
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <HorizontalStackLayout Grid.Row="3" Spacing="12" HorizontalOptions="End">
-            <Button Text="Cancel" Command="{Binding CancelCommand}" />
-        </HorizontalStackLayout>
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="0">
+            <Label Grid.Column="0" Style="{StaticResource StatusBarRead}" Text="{Binding StatusMessage}" />
+            <HorizontalStackLayout Grid.Column="2" Spacing="2">
+                <Button Text="settings" Command="{Binding OpenSettingsCommand}"
+                        Style="{StaticResource StatusBarButton}"
+                        SemanticProperties.Description="Open settings" />
+                <Button Text="cancel" Command="{Binding CancelCommand}"
+                        Style="{StaticResource StatusBarButton}"
+                        SemanticProperties.Description="Cancel open post" />
+            </HorizontalStackLayout>
+        </Grid>
     </Grid>
 </ContentPage>

@@ -3,11 +3,13 @@
     <Project Path="../src/PostXING.Core/PostXING.Core.csproj" />
     <Project Path="../src/PostXING.GitHub/PostXING.GitHub.csproj" />
     <Project Path="../src/PostXING.Markdown/PostXING.Markdown.csproj" />
+    <Project Path="../src/PostXING.ViewModels/PostXING.ViewModels.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="../tests/PostXING.Core.Tests/PostXING.Core.Tests.csproj" />
     <Project Path="../tests/PostXING.GitHub.Tests/PostXING.GitHub.Tests.csproj" />
     <Project Path="../tests/PostXING.Markdown.Tests/PostXING.Markdown.Tests.csproj" />
+    <Project Path="../tests/PostXING.ViewModels.Tests/PostXING.ViewModels.Tests.csproj" />
   </Folder>
   <Project Path="../PostXING.App.csproj" />
 </Solution>

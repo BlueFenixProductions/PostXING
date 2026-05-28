@@ -1,18 +1,44 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:vm="clr-namespace:PostXING.App.ViewModels"
+             xmlns:vm="clr-namespace:PostXING.ViewModels;assembly=PostXING.ViewModels"
              x:Class="PostXING.App.Views.EditorPage"
              x:DataType="vm:EditorViewModel"
-             BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+             BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
              Shell.NavBarIsVisible="False">
-    <ContentPage.Resources>
-        <Style TargetType="Label" x:Key="StatusLabel">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="TextColor" Value="{StaticResource Muted}" />
-            <Setter Property="VerticalOptions" Value="Center" />
-        </Style>
-    </ContentPage.Resources>
+    <!-- Minimum-chrome MenuBar: only canonical Windows keyboard accelerators live here.
+         All visible affordances stay in the status bar at the bottom of the editor. -->
+    <ContentPage.MenuBarItems>
+        <MenuBarItem Text="post">
+            <MenuFlyoutItem Text="new" Command="{Binding NewPostCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Ctrl" Key="N" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="open" Command="{Binding OpenPostCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Ctrl" Key="O" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem Text="save" Command="{Binding SaveCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Ctrl" Key="S" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="publish" Command="{Binding PublishCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Ctrl,Shift" Key="P" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem Text="settings" Command="{Binding SettingsCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Ctrl" Key="," />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+        </MenuBarItem>
+    </ContentPage.MenuBarItems>
 
     <Grid>
         <Grid RowDefinitions="*,Auto">
@@ -20,57 +46,56 @@
                     Text="{Binding RawMarkdown, Mode=TwoWay}"
                     AutoSize="TextChanges"
                     BackgroundColor="Transparent"
-                    TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}"
+                    TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
                     FontFamily="HackRegular"
                     FontSize="14"
                     Margin="2"
                     Placeholder="Start writing..."
-                    PlaceholderColor="{StaticResource Muted}" />
+                    PlaceholderColor="{StaticResource Paper500}"
+                    SemanticProperties.Description="Post body"
+                    SemanticProperties.Hint="The Markdown body of the current post." />
 
-            <Grid Grid.Row="1" Padding="6,4" ColumnDefinitions="Auto,*,Auto">
-                <HorizontalStackLayout Grid.Column="0" Spacing="12">
-                    <Label Style="{StaticResource StatusLabel}" Text="New">
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding NewPostCommand}" />
-                        </Label.GestureRecognizers>
-                    </Label>
-                    <Label Style="{StaticResource StatusLabel}" Text="Open">
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding OpenPostCommand}" />
-                        </Label.GestureRecognizers>
-                    </Label>
-                    <Label Style="{StaticResource StatusLabel}" Text="Settings">
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding SettingsCommand}" />
-                        </Label.GestureRecognizers>
-                    </Label>
-                    <Label Style="{StaticResource StatusLabel}" Text="Save" IsVisible="{Binding IsDirty}">
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding SaveCommand}" />
-                        </Label.GestureRecognizers>
-                    </Label>
-                    <Label Style="{StaticResource StatusLabel}" Text="Publish" IsVisible="{Binding IsDirty}">
-                        <Label.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding PublishCommand}" />
-                        </Label.GestureRecognizers>
-                    </Label>
+            <Grid Grid.Row="1" Padding="6,4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="0">
+                <HorizontalStackLayout Grid.Column="0" Spacing="2">
+                    <Button Text="new" Command="{Binding NewPostCommand}"
+                            Style="{StaticResource StatusBarButton}"
+                            SemanticProperties.Description="New post" />
+                    <Button Text="open" Command="{Binding OpenPostCommand}"
+                            Style="{StaticResource StatusBarButton}"
+                            SemanticProperties.Description="Open post" />
+                    <Button Text="settings" Command="{Binding SettingsCommand}"
+                            Style="{StaticResource StatusBarButton}"
+                            SemanticProperties.Description="Settings" />
+                    <Button Text="save" Command="{Binding SaveCommand}"
+                            IsVisible="{Binding IsDirty}"
+                            Style="{StaticResource StatusBarButton}"
+                            TextColor="{StaticResource PhoenixBlue}"
+                            SemanticProperties.Description="Save post" />
+                    <Button Text="publish" Command="{Binding PublishCommand}"
+                            IsVisible="{Binding IsDirty}"
+                            Style="{StaticResource StatusBarButton}"
+                            TextColor="{AppThemeBinding Light={StaticResource ForgeAmberDeep}, Dark={StaticResource ForgeAmber}}"
+                            SemanticProperties.Description="Publish post" />
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Grid.Column="2" Spacing="16">
-                    <Label Style="{StaticResource StatusLabel}" Text="{Binding SaveStatus}" />
-                    <Label Style="{StaticResource StatusLabel}" Text="{Binding CurrentPath}" />
-                    <Label Style="{StaticResource StatusLabel}" Text="{Binding WordCount, StringFormat='{0} words'}" />
-                    <Label Style="{StaticResource StatusLabel}" Text="{Binding ReadingTimeMinutes, StringFormat='{0} min'}" />
-                    <Label Style="{StaticResource StatusLabel}" Text="{Binding GhAuthStatus}" />
+                    <Label Style="{StaticResource StatusBarRead}" Text="{Binding SaveStatus}" />
+                    <Label Style="{StaticResource StatusBarRead}" Text="{Binding CurrentPath}" />
+                    <Label Style="{StaticResource StatusBarRead}" Text="{Binding WordCount, StringFormat='{0} words'}"
+                           TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
+                    <Label Style="{StaticResource StatusBarRead}" Text="{Binding ReadingTimeMinutes, StringFormat='{0} min'}"
+                           TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
+                    <Label Style="{StaticResource StatusBarRead}" Text="{Binding GhAuthStatus}"
+                           TextColor="{AppThemeBinding Light={StaticResource ForgeAmberDeep}, Dark={StaticResource ForgeAmber}}" />
                 </HorizontalStackLayout>
             </Grid>
         </Grid>
 
-        <!-- Title prompt overlay -->
+        <!-- Title prompt overlay: the one sanctioned modal moment. -->
         <Grid IsVisible="{Binding ShowTitlePrompt}"
-              BackgroundColor="{AppThemeBinding Light=#80000000, Dark=#A0000000}">
+              BackgroundColor="{StaticResource Scrim}">
             <Border StrokeThickness="0"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+                    BackgroundColor="{StaticResource Ink850}"
                     Padding="56"
                     Margin="64"
                     HorizontalOptions="Fill"
@@ -78,23 +103,37 @@
                     StrokeShape="RoundRectangle 8,8,8,8">
                 <Grid RowDefinitions="Auto,*,Auto" RowSpacing="32">
                     <Label Grid.Row="0" Text="What are we writing about?" FontSize="32"
-                           TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
+                           FontFamily="HackBold"
+                           TextColor="{StaticResource Paper100}"
+                           SemanticProperties.HeadingLevel="Level1" />
 
                     <VerticalStackLayout Grid.Row="1" Spacing="24" VerticalOptions="Center">
                         <Entry Placeholder="Post title" Text="{Binding PromptTitle}"
                                FontSize="28"
                                HeightRequest="72"
                                BackgroundColor="Transparent"
-                               TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
+                               TextColor="{StaticResource Paper100}"
+                               PlaceholderColor="{StaticResource Paper500}"
+                               SemanticProperties.Description="Post title"
+                               ReturnType="Next"
+                               ReturnCommand="{Binding ConfirmTitlePromptCommand}" />
                         <Entry Placeholder="Author (optional)" Text="{Binding PromptAuthor}"
                                FontSize="18"
                                BackgroundColor="Transparent"
-                               TextColor="{AppThemeBinding Light={StaticResource InkLight}, Dark={StaticResource InkDark}}" />
+                               TextColor="{StaticResource Paper300}"
+                               PlaceholderColor="{StaticResource Paper500}"
+                               SemanticProperties.Description="Post author"
+                               ReturnType="Done"
+                               ReturnCommand="{Binding ConfirmTitlePromptCommand}" />
                     </VerticalStackLayout>
 
                     <HorizontalStackLayout Grid.Row="2" Spacing="12" HorizontalOptions="End">
-                        <Button Text="Cancel" Command="{Binding CancelTitlePromptCommand}" />
-                        <Button Text="Start writing" Command="{Binding ConfirmTitlePromptCommand}" />
+                        <Button Text="cancel" Command="{Binding CancelTitlePromptCommand}"
+                                Style="{StaticResource ButtonGhost}"
+                                SemanticProperties.Description="Cancel new post" />
+                        <Button Text="start writing" Command="{Binding ConfirmTitlePromptCommand}"
+                                Style="{StaticResource ButtonPrimary}"
+                                SemanticProperties.Description="Start writing post" />
                     </HorizontalStackLayout>
                 </Grid>
             </Border>

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>PostXING.ViewModels</RootNamespace>
+    <AssemblyName>PostXING.ViewModels</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PostXING.ViewModels.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PostXING.Core\PostXING.Core.csproj" />
+    <ProjectReference Include="..\PostXING.Markdown\PostXING.Markdown.csproj" />
+    <ProjectReference Include="..\PostXING.GitHub\PostXING.GitHub.csproj" />
+  </ItemGroup>
+</Project>

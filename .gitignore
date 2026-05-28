@@ -37,3 +37,4 @@ Thumbs.db
 # Claude-managed (per-developer, refetchable)
 .agents/
 .claude/skills/
+.impeccable/
