@@ -20,6 +20,18 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <!-- Don't sweep up sibling project trees. App owns root-level files only. -->
+  <ItemGroup>
+    <Compile Remove="src\**" />
+    <Compile Remove="tests\**" />
+    <None Remove="src\**" />
+    <None Remove="tests\**" />
+    <EmbeddedResource Remove="src\**" />
+    <EmbeddedResource Remove="tests\**" />
+    <MauiXaml Remove="src\**" />
+    <MauiXaml Remove="tests\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
@@ -29,8 +41,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PostXING.Core\PostXING.Core.csproj" />
-    <ProjectReference Include="..\PostXING.GitHub\PostXING.GitHub.csproj" />
-    <ProjectReference Include="..\PostXING.Markdown\PostXING.Markdown.csproj" />
+    <ProjectReference Include="src\PostXING.Core\PostXING.Core.csproj" />
+    <ProjectReference Include="src\PostXING.GitHub\PostXING.GitHub.csproj" />
+    <ProjectReference Include="src\PostXING.Markdown\PostXING.Markdown.csproj" />
   </ItemGroup>
 </Project>

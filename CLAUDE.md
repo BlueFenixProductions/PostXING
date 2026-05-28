@@ -17,10 +17,12 @@ This repository previously held a recovered decompilation of PostXING v2 from 20
 ## Run
 
 ```powershell
-dotnet run --project src/PostXING.App
+dotnet run
 ```
 
-(or `dotnet run` from `src/PostXING.App/`). Launch profile `PostXING` is wired in `Properties/launchSettings.json` for F5 in VS / Rider / VS Code C# Dev Kit.
+That's it — from the repo root. The runnable App csproj lives at the repo root (`PostXING.App.csproj`); the .NET CLI picks it up automatically. Launch profile `PostXING` is wired in `Properties/launchSettings.json` for F5 in VS / Rider / VS Code C# Dev Kit.
+
+The libraries `Compile Remove="src\**"` exclude is in the App csproj precisely so this layout works — the root project doesn't sweep up sibling project trees. Don't remove that exclude block.
 
 ## Build / Test
 
@@ -35,16 +37,19 @@ Requires `maui-windows` workload: `dotnet workload install maui-windows`.
 ## Project layout
 
 ```
+PostXING.App.csproj     net10.0-windows10.0.19041.0 — the runnable MAUI app
+MauiProgram.cs, App.xaml, AppShell.xaml, ViewModels/, Views/, Platforms/, Properties/
 src/
-  PostXING.Core/       net10.0  — domain (Slug, FrontMatter, Post, SiteConfig, PublishState)
-  PostXING.GitHub/     net10.0  — IGitHubGateway + GhCliGitHubGateway + InMemoryGitHubGateway + GitHubPublishService
-  PostXING.Markdown/   net10.0  — YamlFrontMatterParser + MarkdigRenderer
-  PostXING.App/        net10.0-windows10.0.19041.0 — MAUI shell, ViewModels, Views
+  PostXING.Core/       net10.0 — domain (Slug, FrontMatter, Post, SiteConfig, PublishState)
+  PostXING.GitHub/     net10.0 — IGitHubGateway + GhCliGitHubGateway + InMemoryGitHubGateway + GitHubPublishService
+  PostXING.Markdown/   net10.0 — YamlFrontMatterParser + MarkdigRenderer
 tests/
   PostXING.Core.Tests/
   PostXING.GitHub.Tests/      (uses InMemoryGitHubGateway; gh CLI not invoked)
   PostXING.Markdown.Tests/
 ```
+
+The runnable App project sits at the repo root so plain `dotnet run` finds it. Libraries stay under `src/`, tests under `tests/`.
 
 `PostXING.App.Tests` is intentionally not present. If/when ViewModel unit tests are wanted, extract ViewModels to a `PostXING.ViewModels` net10.0 project first so the tests don't need a MAUI TFM.
 

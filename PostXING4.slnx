@@ -1,6 +1,5 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/PostXING.App/PostXING.App.csproj" />
     <Project Path="src/PostXING.Core/PostXING.Core.csproj" />
     <Project Path="src/PostXING.GitHub/PostXING.GitHub.csproj" />
     <Project Path="src/PostXING.Markdown/PostXING.Markdown.csproj" />
@@ -10,4 +9,5 @@
     <Project Path="tests/PostXING.GitHub.Tests/PostXING.GitHub.Tests.csproj" />
     <Project Path="tests/PostXING.Markdown.Tests/PostXING.Markdown.Tests.csproj" />
   </Folder>
+  <Project Path="PostXING.App.csproj" />
 </Solution>

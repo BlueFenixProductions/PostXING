@@ -42,7 +42,12 @@
       "Bash(dotnet run *)",
       "Bash(powershell -Command \"Get-Process PostXING.App -ErrorAction SilentlyContinue | Stop-Process -Force; if \\(\\\\$?\\) { Write-Host 'launched and killed cleanly' } else { Write-Host 'no process found' }\")",
       "Bash(git commit *)",
-      "Bash(powershell -Command \"Get-Process PostXING.App -ErrorAction SilentlyContinue | Stop-Process -Force; if \\(\\\\$?\\) { Write-Host 'app launched and killed cleanly' } else { Write-Host 'process not found' }\")"
+      "Bash(powershell -Command \"Get-Process PostXING.App -ErrorAction SilentlyContinue | Stop-Process -Force; if \\(\\\\$?\\) { Write-Host 'app launched and killed cleanly' } else { Write-Host 'process not found' }\")",
+      "Bash(git mv *)",
+      "Bash(powershell -Command \"Get-Process PostXING.App -ErrorAction SilentlyContinue | Stop-Process -Force; if \\(\\\\$?\\) { Write-Host '== dotnet run launched the app ==' } else { Write-Host '!! process not found' }\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Chris\\Documents\\GitHub\\PostXING-decompiled\\.git"
     ]
   }
 }
