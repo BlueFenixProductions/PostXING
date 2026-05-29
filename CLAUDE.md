@@ -17,21 +17,31 @@ This repository previously held a recovered decompilation of PostXING v2 from 20
 
 ## Run / build / test from the repo root
 
-All four of these work no-args from the root:
+These all work no-args from the root:
 
 ```powershell
 dotnet run                 # launches the App
 dotnet build               # builds the App csproj + its referenced libs
 bun dev                    # fast: self-clean + launch the built app, no rebuild (npm run dev too)
-bun dev:build              # self-clean + incremental build, then launch (after code/asset edits)
+bun dev:build              # self-clean + version-stamp + incremental build, then launch (after code/asset edits)
+bun build                  # full slnx Release build, version-stamped (CI parity; npm run build too)
 bun xunit                  # runs all tests via the slnx       (npm run xunit also works)
+bun bump                   # regenerate .version only (date-based version + hotfix counter)
 ```
 
 The test script is named `xunit`, **not** `test`, on purpose: `bun test` is a Bun built-in that runs Bun's own JS/TS test runner and ignores the `package.json` script, so a `test` script would silently never run under `bun`. `bun xunit` (no collision) wraps `dotnet test`. Don't rename it back to `test`.
 
-`bun build` / `npm run build` runs `dotnet build solution/PostXING4.slnx -c Release`, which builds the whole graph (App + libs + tests) and is what you want for CI parity.
+`bun build` / `npm run build` runs `scripts/build.ps1`, which stamps the version (regenerates `.version` and passes it to MSBuild — see **Version stamping** below) and then runs `dotnet build solution/PostXING4.slnx -c Release` over the whole graph (App + libs + tests). It's what you want for CI parity. It deliberately routes through a `.ps1` rather than calling `dotnet` inline so the `.version` read behaves identically under `bun` and `npm` (cmd.exe, which `npm` uses on Windows, has no `$(...)` command substitution).
 
-`bun dev` and `bun dev:build` both run `scripts/dev.ps1`, which first force-kills any leftover `PostXING.App`. A stale instance — from a closed terminal or a Ctrl-C that left the GUI process alive — locks the apphost `.exe`/`.dll`s in `bin\`, so the next build or launch can't overwrite them and fails (commonly exit `58`). After the kill, **`bun dev` launches the already-built Debug app directly** for a near-instant start (no rebuild), while **`bun dev:build` runs an incremental `dotnet build` first** — use it after you change C#, XAML, or the editor's `index.html` (assets only land in `bin\` on a build). Plain `dotnet run` neither self-cleans nor is fast: it rebuilds the whole MAUI app every launch (~20–50s here), so prefer the `bun` scripts. The dev script is ASCII-only by the `.ps1` rule; if it ever needs a non-ASCII char, use a `[char]` escape.
+`bun dev` and `bun dev:build` both run `scripts/dev.ps1`, which first force-kills any leftover `PostXING.App`. A stale instance — from a closed terminal or a Ctrl-C that left the GUI process alive — locks the apphost `.exe`/`.dll`s in `bin\`, so the next build or launch can't overwrite them and fails (commonly exit `58`). After the kill, **`bun dev` launches the already-built Debug app directly** for a near-instant start (no rebuild), while **`bun dev:build` stamps the version then runs an incremental `dotnet build`** — use it after you change C#, XAML, or the editor's `index.html` (assets only land in `bin\` on a build). Plain `dotnet run` neither self-cleans nor is fast: it rebuilds the whole MAUI app every launch (~20–50s here), so prefer the `bun` scripts. The `dev.ps1` / `build.ps1` scripts are ASCII-only by the `.ps1` rule; if one ever needs a non-ASCII char, use a `[char]` escape.
+
+### Version stamping
+
+`version.mjs` computes a date-based version and writes it to `.version` at the repo root: a 4-part `major.minor.patch.build` string where `major` is `4` (the 4.x line), `minor` is the current year minus 2022, `patch` is month + zero-padded day (e.g. May 29 -> `529`), and `build` is a monotonic hotfix counter that `++`s off the previous `.version`. `.version` is **gitignored** and regenerated on every build, so the counter never churns committed files — which also means it resets to `1` on a fresh clone or if `.version` is deleted.
+
+`scripts/build.ps1` and `scripts/dev.ps1 -Build` regenerate `.version`, then split it and pass the pieces to `dotnet build`: `-p:Version=` (the full 4-part, for assembly/file metadata), `-p:ApplicationDisplayVersion=` (`major.minor.patch` — this is what `AppInfo.VersionString` returns and what the About page shows), and `-p:ApplicationVersion=` (the build number, `AppInfo.BuildString`). `bun bump` (`node version.mjs`) regenerates `.version` without building.
+
+Plain `dotnet build` / `dotnet run` at the root do **not** stamp — they build with the csproj defaults (`ApplicationDisplayVersion` `4.0.0`, `ApplicationVersion` `1`). Use the `bun` scripts when you want the real version in the binary.
 
 ### Why this layout
 
@@ -48,6 +58,8 @@ dotnet restore solution/PostXING4.slnx
 dotnet build   solution/PostXING4.slnx -c Release
 dotnet test    solution/PostXING4.slnx -c Release
 ```
+
+These explicit invocations build with the csproj default version — they don't run `version.mjs`, so use `bun build` when you want a version-stamped binary.
 
 Requires `maui-windows` workload: `dotnet workload install maui-windows`.
 
