@@ -42,18 +42,11 @@
 
     <Grid>
         <Grid RowDefinitions="*,Auto">
-            <Editor Grid.Row="0"
-                    Text="{Binding RawMarkdown, Mode=TwoWay}"
-                    AutoSize="TextChanges"
-                    BackgroundColor="Transparent"
-                    TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
-                    FontFamily="HackRegular"
-                    FontSize="14"
-                    Margin="2"
-                    Placeholder="Start writing..."
-                    PlaceholderColor="{StaticResource Paper500}"
-                    SemanticProperties.Description="Post body"
-                    SemanticProperties.Hint="The Markdown body of the current post." />
+            <WebView Grid.Row="0"
+                     x:Name="EditorWebView"
+                     BackgroundColor="Transparent"
+                     SemanticProperties.Description="Post body"
+                     SemanticProperties.Hint="The Markdown body of the current post, with GitHub Dark Colorblind syntax highlighting for frontmatter and markdown." />
 
             <Grid Grid.Row="1" Padding="6,4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="0">
                 <HorizontalStackLayout Grid.Column="0" Spacing="2">

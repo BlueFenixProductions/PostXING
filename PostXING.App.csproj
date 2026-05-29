@@ -37,6 +37,21 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- App icon: composite of the Writeous-Plume mark (Phoenix Blue wings + Paper-100
+         feather + Forge-flame + sparkles) over an Ink-850 → Ink-1000 gradient.
+         Single-file MauiIcon path; MAUI auto-resizes and embeds as .ico in the .exe. -->
+    <MauiIcon Include="Resources\AppIcon\appicon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- HybridWebView assets. The MAUI SDK is supposed to auto-include Resources\Raw\**
+         as MauiAsset but the convention isn't firing reliably for nested folders here,
+         so we declare them explicitly. The HybridWebView resolves files from this set
+         via its virtual host. -->
+    <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />

@@ -22,4 +22,14 @@ public partial class OpenPostPage : ContentPage
         base.OnAppearing();
         _ = _vm.RefreshAsync();
     }
+
+    private void OnEntrySelected(object? sender, SelectionChangedEventArgs e)
+    {
+        if (e.CurrentSelection.Count > 0 && e.CurrentSelection[0] is PostEntry entry)
+            _ = _vm.SelectCommand.ExecuteAsync(entry);
+
+        // Clear so the same row can be tapped again later if needed.
+        if (sender is CollectionView cv)
+            cv.SelectedItem = null;
+    }
 }

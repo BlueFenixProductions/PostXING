@@ -299,11 +299,33 @@ Flat by default. Depth is conveyed through the ink stack (`ink-1000` sunken, `in
 
 ## 5. Components
 
+### App Icon (Identity)
+- **Source:** the Writeous-Plume mark, composited from the three `.icon`-bundle layers (phoenix wings, feather + flame, sparkles) over an Ink-850 → Ink-1000 vertical gradient.
+- **Marks:** Phoenix Blue (`#1E5BFF`) wings as the silhouette. Paper-100 cream feather as the writing-tool affordance. A Phoenix-Blue-and-Paper flame as the studio's ember. A pair of cream sparkles as accent.
+- **Canvas:** Ink-850 (`#1A1A2E`) at the top, Ink-1000 (`#08081A`) at the bottom. Same dark surface stack the editor and gh terminal live on, so the .exe icon, taskbar tile, and the running editor read as one continuous surface.
+- **File:** `Resources/AppIcon/appicon.png` (1024×1024). Declared via `<MauiIcon Include="..." />` in `PostXING.App.csproj`; MAUI auto-resizes to every Windows tile size and embeds a `.ico` into the .exe at build time.
+- **Why the Writeous-Plume mark:** PostXING and Writeous-Plume are siblings inside Blue Fenix Productions. Sharing the mark signals that they're two surfaces of the same writing studio, not unrelated tools. No second icon is planned.
+- **Don't** swap to a generic document-icon glyph or a typeface-as-icon ("P" in a square). The mark is the brand; using a placeholder is a brand violation.
+
 ### Editor Surface
-- **Character:** The entire page below the status bar is a single `Editor`. No internal padding beyond a 2px outer margin.
-- **Typography:** Hack-Regular at 14pt, theme-bound ink color (`paper-300` on dark, `ink-950` on light).
-- **Placeholder:** the verbatim string `"Start writing..."` in `paper-500`.
-- **AutoSize:** `TextChanges` so the editor grows with the post.
+- **Character:** The entire page below the status bar is a `HybridWebView` hosting a single-page editor at `Resources/Raw/editor/index.html`. The page is a `contenteditable` div with a hand-rolled markdown + YAML frontmatter tokenizer, themed in **GitHub Dark Colorblind** (and a matching Light Colorblind for the writer's-daylight mode). No external JS libraries; the entire editor is ~300 lines of plain JS + CSS in one file, with `Hack-Regular.ttf` and `Hack-Bold.ttf` copied into the same folder for the WebView's `@font-face`.
+- **Why a WebView and not MAUI's `Editor`:** MAUI's native `Editor` is a plain textbox with no per-character coloring. GitHub-grade syntax highlighting on the live editing surface requires either a WebView host or a Windows-only Handler over WinUI's `RichEditBox`. The WebView path is smaller, fully offline, and themable through CSS variables. The HybridWebView keeps the C# ↔ JS bridge first-class.
+- **Typography:** Hack-Regular at 14pt, line-height 1.55. Inline `@font-face` declarations point at the bundled TTFs so the editor renders the brand voice independent of WebView2's system-font resolution.
+- **Theme tokens** (mirror GitHub's `github-dark-colorblind` and `github-light-colorblind` themes verbatim, not Blue Fenix's own palette — the syntax theme is a separate brand surface chosen for distinguishability):
+  - **Dark canvas** `#0d1117`, foreground `#e6edf3` (one notch off from Ink-950 / Paper-300; the closeness is the point).
+  - **Light canvas** `#ffffff`, foreground `#1f2328`.
+  - **Heading** `#79c0ff` bold, marker (`#`, `##`, ...) in `#d2a8ff`.
+  - **YAML key** `#ff7b72`, **value-string** `#a5d6ff`, **value-number/bool** `#79c0ff`, **separator (`---`)** `#d2a8ff`.
+  - **List marker** (`-`, `*`, `1.`) `#ffa657`, **bold marker** (`**`) `#ffa657` on text rendered bold, **italic marker** (`_` / `*`) `#ffa657` on italic.
+  - **Inline code** + **code fences** `#a5d6ff`, **link text** `#d2a8ff`, **link URL** `#a5d6ff` underlined, **blockquote** `#a5d6ff` italic.
+- **Placeholder:** `"Start writing..."` rendered via a `:empty::before` pseudo-element in `var(--comment)`. No native MAUI placeholder is set.
+- **Bridge:** the JS posts `{type:'change',text}` on every input through `HybridWebView.SendRawMessage`. C# pushes initial text via `PostXING.setText(json)` after the JS announces `{type:'ready'}`. A `_lastSyncedText` cursor on the C# side breaks the C#-↔-JS feedback loop. Theme switches push `PostXING.setTheme('dark'|'light')` on `Application.RequestedThemeChanged`.
+
+### Named Rules (Editor)
+
+**The One-Tokenizer Rule.** The markdown + YAML highlighter lives in [Resources/Raw/editor/index.html](Resources/Raw/editor/index.html) and nowhere else. Do not split it into multiple files; do not pull in CodeMirror, Monaco, Prism, or highlight.js. The hand-rolled tokenizer is small, debuggable, and brand-controllable — three things a library import would each cost.
+
+**The GitHub-Theme-Verbatim Rule.** Syntax colors come from `github-dark-colorblind` and `github-light-colorblind` literally. They are not the Blue Fenix palette and should not drift toward it. The studio's tokens (phoenix-blue, signal-cyan, forge-amber) carry interactive and structural meaning in the rest of the app; the syntax theme carries language meaning, and bleeding one into the other erases the distinction.
 
 ### Status Bar (Editor)
 - **Character:** A thin row at the bottom of the editor, padded 6px horizontal / 4px vertical. Reads as a sentence, not a toolbar.

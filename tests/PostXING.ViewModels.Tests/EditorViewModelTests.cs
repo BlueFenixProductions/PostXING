@@ -76,6 +76,61 @@ public sealed class EditorViewModelTests
         vm.ShowTitlePrompt.ShouldBeFalse();
     }
 
+    /// <summary>
+    /// Regression test: when LoadPost is called, RawMarkdown must update to the loaded
+    /// content AND fire PropertyChanged so the EditorPage's WebView bridge can push the
+    /// content to the JS editor. If this test fails, the "opened post shows empty editor"
+    /// regression has returned.
+    /// </summary>
+    [Fact]
+    public void LoadPost_sets_RawMarkdown_and_fires_PropertyChanged_for_RawMarkdown()
+    {
+        var parser = Substitute.For<IFrontMatterParser>();
+        parser.Parse(Arg.Any<string>()).Returns(call =>
+            new ParsedDocument(FrontMatter.Default, call.Arg<string>()));
+        var gateway = Substitute.For<IGitHubGateway>();
+        gateway.CheckAuthAsync(Arg.Any<CancellationToken>()).Returns(new GhAuthStatus(false, null, "stubbed"));
+        var settings = Substitute.For<ISettingsStore>();
+        settings.Current.Returns(AppSettings.Default);
+        var local = Substitute.For<ILocalPostStore>();
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System);
+
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        const string contents =
+            "---\ntitle: \"Hello\"\nauthor: \"Chris\"\ndate: 2026-05-29\n---\n\n# Hello\n\nWorld.\n";
+        vm.LoadPost(PostHandle.FromLocalPath(@"C:\posts\drafts\hello.md"), contents);
+
+        vm.RawMarkdown.ShouldBe(contents, "LoadPost must overwrite RawMarkdown with the loaded contents.");
+        raised.ShouldContain(nameof(EditorViewModel.RawMarkdown),
+            "RawMarkdown PropertyChanged must fire so the WebView bridge can push the new content. " +
+            "Without this event the editor surface stays empty after opening an existing post.");
+        vm.WordCount.ShouldBeGreaterThan(0, "WordCount must reflect the loaded body, not the previous state.");
+    }
+
+    [Fact]
+    public void Loading_a_post_then_typing_keeps_in_sync()
+    {
+        var parser = Substitute.For<IFrontMatterParser>();
+        parser.Parse(Arg.Any<string>()).Returns(call =>
+            new ParsedDocument(FrontMatter.Default, call.Arg<string>()));
+        var gateway = Substitute.For<IGitHubGateway>();
+        gateway.CheckAuthAsync(Arg.Any<CancellationToken>()).Returns(new GhAuthStatus(false, null, "stubbed"));
+        var settings = Substitute.For<ISettingsStore>();
+        settings.Current.Returns(AppSettings.Default);
+        var local = Substitute.For<ILocalPostStore>();
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System);
+
+        vm.LoadPost(PostHandle.FromLocalPath(@"C:\posts\post.md"), "original");
+        vm.IsDirty.ShouldBeFalse();
+
+        vm.RawMarkdown = "edited";
+
+        vm.IsDirty.ShouldBeTrue("Editing after a load must mark the buffer dirty.");
+        vm.RawMarkdown.ShouldBe("edited");
+    }
+
     [Fact]
     public async Task SaveAsync_on_unconfigured_local_folder_emits_a_helpful_status_and_does_not_throw()
     {

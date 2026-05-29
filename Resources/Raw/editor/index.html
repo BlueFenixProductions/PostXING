@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>editor</title>
+<style>
+@font-face {
+  font-family: 'Hack';
+  src: url('./Hack-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Hack';
+  src: url('./Hack-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+:root {
+  /* GitHub Dark Colorblind defaults */
+  --canvas: #0d1117;
+  --text: #e6edf3;
+  --comment: #8b949e;
+  --string: #a5d6ff;
+  --number: #79c0ff;
+  --keyword: #ff7b72;
+  --function: #d2a8ff;
+  --variable: #ffa657;
+  --heading: #79c0ff;
+  --punctuation: #d2a8ff;
+  --caret: #79c0ff;
+  --selection: rgba(56, 139, 253, 0.30);
+}
+
+body.light {
+  /* GitHub Light Colorblind */
+  --canvas: #ffffff;
+  --text: #1f2328;
+  --comment: #59636e;
+  --string: #0a3069;
+  --number: #0550ae;
+  --keyword: #cf222e;
+  --function: #8250df;
+  --variable: #953800;
+  --heading: #0550ae;
+  --punctuation: #6e7781;
+  --caret: #0550ae;
+  --selection: rgba(84, 174, 255, 0.30);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--canvas);
+  overflow: hidden;
+}
+
+#editor {
+  font-family: 'Hack', 'Cascadia Mono', Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--canvas);
+  caret-color: var(--caret);
+  padding: 8px 12px;
+  box-sizing: border-box;
+  height: 100vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  outline: none;
+  tab-size: 4;
+}
+
+#editor::selection,
+#editor *::selection { background: var(--selection); }
+
+#editor:empty::before {
+  content: 'Start writing...';
+  color: var(--comment);
+  pointer-events: none;
+}
+
+.yk { color: var(--keyword); }
+.ys { color: var(--string); }
+.yn { color: var(--number); }
+.yp { color: var(--punctuation); }
+.yc { color: var(--comment); }
+
+.md-h  { color: var(--heading); font-weight: 700; }
+.md-hm { color: var(--punctuation); font-weight: 700; }
+.md-bold { font-weight: 700; }
+.md-italic { font-style: italic; }
+.md-em { color: var(--variable); }
+.md-li { color: var(--variable); font-weight: 700; }
+.md-code { color: var(--string); }
+.md-codeblock { color: var(--string); }
+.md-link-text { color: var(--function); }
+.md-link-url { color: var(--string); text-decoration: underline; }
+.md-link-pct { color: var(--punctuation); }
+.md-bq { color: var(--string); font-style: italic; }
+.md-hr { color: var(--punctuation); }
+.md-html { color: var(--comment); }
+
+.html { color: var(--keyword); font-weight: 700; }
+.html-attr { color: var(--variable); }
+.html-str { color: var(--string); }
+.css-sel { color: var(--function); }
+.css-at { color: var(--keyword); font-weight: 700; }
+.css-prop { color: var(--variable); }
+.css-val { color: var(--string); }
+.css-punct { color: var(--punctuation); }
+.js-kw { color: var(--keyword); }
+.js-str { color: var(--string); }
+.js-num { color: var(--number); }
+.js-comment { color: var(--comment); font-style: italic; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--canvas); }
+::-webkit-scrollbar-thumb { background: var(--comment); border-radius: 4px; opacity: 0.4; }
+::-webkit-scrollbar-thumb:hover { background: var(--text); }
+</style>
+</head>
+<body>
+<div id="editor" contenteditable="true" spellcheck="false" autocorrect="off" autocapitalize="off"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const editor = document.getElementById('editor');
+  let suppressOutgoing = false;
+  let lastSentText = '';
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+  }
+
+  // Inline markdown: **bold**, *italic* / _italic_, `code`, [text](url), ![alt](url)
+  function inlineMd(text) {
+    let out = '';
+    let i = 0;
+    const n = text.length;
+
+    while (i < n) {
+      const c = text[i];
+      const c2 = text[i + 1] || '';
+
+      // inline code: `...`
+      if (c === '`') {
+        const end = text.indexOf('`', i + 1);
+        if (end > i) {
+          out += '<span class="md-code">' + escapeHtml(text.slice(i, end + 1)) + '</span>';
+          i = end + 1;
+          continue;
+        }
+      }
+
+      // bold: **...**
+      if (c === '*' && c2 === '*') {
+        const end = text.indexOf('**', i + 2);
+        if (end > i + 1) {
+          out += '<span class="md-em">**</span>'
+               + '<span class="md-bold">' + inlineMd(text.slice(i + 2, end)) + '</span>'
+               + '<span class="md-em">**</span>';
+          i = end + 2;
+          continue;
+        }
+      }
+
+      // italic: *...* or _..._  (one-char, not at word boundary)
+      if ((c === '*' || c === '_') && c2 !== ' ' && c2 !== c && c2 !== '') {
+        const end = text.indexOf(c, i + 1);
+        if (end > i + 1 && text[end - 1] !== ' ') {
+          out += '<span class="md-em">' + c + '</span>'
+               + '<span class="md-italic">' + inlineMd(text.slice(i + 1, end)) + '</span>'
+               + '<span class="md-em">' + c + '</span>';
+          i = end + 1;
+          continue;
+        }
+      }
+
+      // image: ![alt](url)
+      if (c === '!' && c2 === '[') {
+        const labelEnd = text.indexOf(']', i + 2);
+        if (labelEnd > 0 && text[labelEnd + 1] === '(') {
+          const urlEnd = text.indexOf(')', labelEnd + 2);
+          if (urlEnd > 0) {
+            out += '<span class="md-link-pct">![</span>'
+                 + '<span class="md-link-text">' + escapeHtml(text.slice(i + 2, labelEnd)) + '</span>'
+                 + '<span class="md-link-pct">](</span>'
+                 + '<span class="md-link-url">' + escapeHtml(text.slice(labelEnd + 2, urlEnd)) + '</span>'
+                 + '<span class="md-link-pct">)</span>';
+            i = urlEnd + 1;
+            continue;
+          }
+        }
+      }
+
+      // link: [text](url)
+      if (c === '[') {
+        const labelEnd = text.indexOf(']', i + 1);
+        if (labelEnd > 0 && text[labelEnd + 1] === '(') {
+          const urlEnd = text.indexOf(')', labelEnd + 2);
+          if (urlEnd > 0) {
+            out += '<span class="md-link-pct">[</span>'
+                 + '<span class="md-link-text">' + escapeHtml(text.slice(i + 1, labelEnd)) + '</span>'
+                 + '<span class="md-link-pct">](</span>'
+                 + '<span class="md-link-url">' + escapeHtml(text.slice(labelEnd + 2, urlEnd)) + '</span>'
+                 + '<span class="md-link-pct">)</span>';
+            i = urlEnd + 1;
+            continue;
+          }
+        }
+      }
+
+      // HTML comment: <!-- ... -->
+      if (c === '<' && text.substr(i, 4) === '<!--') {
+        const end = text.indexOf('-->', i + 4);
+        if (end > i) {
+          out += '<span class="md-html">' + escapeHtml(text.slice(i, end + 3)) + '</span>';
+          i = end + 3;
+          continue;
+        }
+      }
+
+      // Inline HTML / Vue / VitePress tag: <Tag ...>, </Tag>, <Tag .../>
+      if (c === '<' && i + 1 < n && (text[i + 1] === '/' || /[A-Za-z]/.test(text[i + 1]))) {
+        const consumed = renderInlineHtmlTag(text, i, (chunk) => out += chunk);
+        if (consumed > 0) {
+          i += consumed;
+          continue;
+        }
+      }
+
+      out += escapeHtml(c);
+      i++;
+    }
+    return out;
+  }
+
+  function renderInlineHtmlTag(text, start, emit) {
+    const end = text.indexOf('>', start + 1);
+    if (end < 0) return 0;
+
+    let inner = text.slice(start + 1, end);
+    const isClose = inner.startsWith('/');
+    if (isClose) inner = inner.slice(1);
+
+    if (inner.length === 0 || !/[A-Za-z]/.test(inner[0])) return 0;
+    let nameEnd = 1;
+    while (nameEnd < inner.length && /[A-Za-z0-9_\-.:]/.test(inner[nameEnd])) nameEnd++;
+    const tagName = inner.slice(0, nameEnd);
+    const afterName = inner.slice(nameEnd);
+
+    const selfClose = afterName.replace(/\s+$/, '').endsWith('/');
+    const attrs = selfClose ? afterName.slice(0, afterName.lastIndexOf('/')) : afterName;
+
+    emit('<span class="html">&lt;' + (isClose ? '/' : '') + escapeHtml(tagName) + '</span>');
+    if (attrs.length > 0) emit(renderHtmlAttributes(attrs));
+    emit('<span class="html">' + (selfClose ? '/' : '') + '&gt;</span>');
+
+    return end - start + 1;
+  }
+
+  function renderHtmlAttributes(attrs) {
+    let out = '';
+    let i = 0;
+    const n = attrs.length;
+    while (i < n) {
+      const c = attrs[i];
+      if (/\s/.test(c)) { out += c; i++; continue; }
+      if (/[A-Za-z_:@#]/.test(c)) {
+        const start = i;
+        while (i < n && /[A-Za-z0-9_\-.:@#]/.test(attrs[i])) i++;
+        out += '<span class="html-attr">' + escapeHtml(attrs.slice(start, i)) + '</span>';
+        if (i < n && attrs[i] === '=') {
+          out += '=';
+          i++;
+          if (i < n && (attrs[i] === '"' || attrs[i] === '\'')) {
+            const quote = attrs[i];
+            const valStart = i;
+            i++;
+            while (i < n && attrs[i] !== quote) i++;
+            if (i < n) i++;
+            out += '<span class="html-str">' + escapeHtml(attrs.slice(valStart, i)) + '</span>';
+          }
+        }
+        continue;
+      }
+      out += escapeHtml(c);
+      i++;
+    }
+    return out;
+  }
+
+  function classifyYamlValue(value) {
+    const trimmed = value.trim();
+    if (trimmed === '' || trimmed === '[]' || trimmed === '{}' || trimmed.startsWith('[') || trimmed.startsWith('{')) return 'yp';
+    if (/^(true|false|null|~|yes|no)$/i.test(trimmed)) return 'yn';
+    if (/^-?\d+(\.\d+)?$/.test(trimmed)) return 'yn';
+    return 'ys';
+  }
+
+  function emitYamlKeyValue(key, colon, sp, value) {
+    let out = '<span class="yk">' + escapeHtml(key) + '</span>'
+            + '<span class="yp">' + escapeHtml(colon) + '</span>'
+            + escapeHtml(sp);
+    if (value !== '') {
+      out += '<span class="' + classifyYamlValue(value) + '">' + escapeHtml(value) + '</span>';
+    }
+    return out;
+  }
+
+  // YAML key:value, or list-item variants (- key: value | - bareValue)
+  function yamlLine(line) {
+    const li = line.match(/^(\s*)(-\s+)(.*)$/);
+    if (li) {
+      const [, indent, marker, rest] = li;
+      let out = escapeHtml(indent) + '<span class="yp">' + escapeHtml(marker) + '</span>';
+      const kv = rest.match(/^([A-Za-z_][\w\-.]*)(\s*:)(\s*)(.*)$/);
+      if (kv) {
+        const [, key, colon, sp, value] = kv;
+        out += emitYamlKeyValue(key, colon, sp, value);
+      } else if (rest !== '') {
+        out += '<span class="' + classifyYamlValue(rest) + '">' + escapeHtml(rest) + '</span>';
+      }
+      return out;
+    }
+
+    const m = line.match(/^(\s*)([A-Za-z_][\w\-.]*)(\s*:)(\s*)(.*)$/);
+    if (!m) return escapeHtml(line);
+    const [, indent, key, colon, sp, value] = m;
+    return escapeHtml(indent) + emitYamlKeyValue(key, colon, sp, value);
+  }
+
+  function mdLine(line, inFence) {
+    if (inFence) {
+      return '<span class="md-codeblock">' + escapeHtml(line) + '</span>';
+    }
+    if (/^```/.test(line.trim())) {
+      return '<span class="md-codeblock">' + escapeHtml(line) + '</span>';
+    }
+    if (/^\s*(\*\s*){3,}\s*$/.test(line) || /^\s*(-\s*){3,}\s*$/.test(line) || /^\s*(_\s*){3,}\s*$/.test(line)) {
+      return '<span class="md-hr">' + escapeHtml(line) + '</span>';
+    }
+    const hm = line.match(/^(#{1,6})(\s+)(.*)$/);
+    if (hm) {
+      return '<span class="md-hm">' + escapeHtml(hm[1]) + '</span>'
+           + escapeHtml(hm[2])
+           + '<span class="md-h">' + inlineMd(hm[3]) + '</span>';
+    }
+    if (/^\s*>/.test(line)) {
+      return '<span class="md-bq">' + escapeHtml(line) + '</span>';
+    }
+    const lm = line.match(/^(\s*)([-*+]|\d+\.)(\s+)(.*)$/);
+    if (lm) {
+      return escapeHtml(lm[1])
+           + '<span class="md-li">' + escapeHtml(lm[2]) + '</span>'
+           + escapeHtml(lm[3])
+           + inlineMd(lm[4]);
+    }
+    return inlineMd(line);
+  }
+
+  // --- CSS-in-<style> tokenizer ----------------------------------------------
+  function renderCssWithPunct(line) {
+    let out = '';
+    for (const ch of line) {
+      if (ch === '{' || ch === '}') out += '<span class="css-punct">' + ch + '</span>';
+      else out += escapeHtml(ch);
+    }
+    return out;
+  }
+
+  function renderCssValue(value) {
+    if (value === '') return '';
+    return '<span class="css-val">' + escapeHtml(value) + '</span>';
+  }
+
+  function appendCssSepWithColon(sep) {
+    const idx = sep.indexOf(':');
+    if (idx < 0) return escapeHtml(sep);
+    return escapeHtml(sep.slice(0, idx))
+         + '<span class="css-punct">:</span>'
+         + escapeHtml(sep.slice(idx + 1));
+  }
+
+  function appendCssEndRun(endRun) {
+    const idx = endRun.indexOf(';');
+    if (idx < 0) return escapeHtml(endRun);
+    return escapeHtml(endRun.slice(0, idx))
+         + '<span class="css-punct">;</span>'
+         + escapeHtml(endRun.slice(idx + 1));
+  }
+
+  function renderCssSelector(head) {
+    const at = head.match(/^(\s*)(@[A-Za-z-]+)(.*)$/);
+    if (at) {
+      const [, indent, kw, rest] = at;
+      let out = escapeHtml(indent) + '<span class="css-at">' + escapeHtml(kw) + '</span>';
+      if (rest !== '') out += '<span class="css-sel">' + escapeHtml(rest) + '</span>';
+      return out;
+    }
+    const lead = head.match(/^(\s*)(.*?)(\s*)$/);
+    if (!lead || lead[2] === '') return escapeHtml(head);
+    return escapeHtml(lead[1])
+         + '<span class="css-sel">' + escapeHtml(lead[2]) + '</span>'
+         + escapeHtml(lead[3]);
+  }
+
+  function renderCssDeclarations(tail) {
+    let out = '';
+    const parts = tail.split(';');
+    for (let i = 0; i < parts.length; i++) {
+      const seg = parts[i];
+      const closeIdx = seg.indexOf('}');
+      if (closeIdx >= 0) {
+        const before = seg.slice(0, closeIdx);
+        const after = seg.slice(closeIdx + 1);
+        if (before.trim() !== '') out += cssLine(before);
+        else out += escapeHtml(before);
+        out += '<span class="css-punct">}</span>';
+        if (after !== '') out += escapeHtml(after);
+        if (i < parts.length - 1) out += '<span class="css-punct">;</span>';
+        continue;
+      }
+      if (seg.trim() === '') out += escapeHtml(seg);
+      else out += cssLine(seg);
+      if (i < parts.length - 1) out += '<span class="css-punct">;</span>';
+    }
+    return out;
+  }
+
+  function cssLine(line) {
+    if (/^\s*$/.test(line)) return escapeHtml(line);
+    if (/^\s*\}\s*$/.test(line)) return renderCssWithPunct(line);
+
+    const braceIdx = line.indexOf('{');
+    if (braceIdx >= 0) {
+      const head = line.slice(0, braceIdx);
+      const tail = line.slice(braceIdx + 1);
+      let out = renderCssSelector(head) + '<span class="css-punct">{</span>';
+      if (tail !== '') out += renderCssDeclarations(tail);
+      return out;
+    }
+
+    const decl = line.match(/^(\s*)([A-Za-z_-][\w-]*)(\s*:\s*)(.*?)(\s*;?\s*)$/);
+    if (decl && decl[2]) {
+      return escapeHtml(decl[1])
+           + '<span class="css-prop">' + escapeHtml(decl[2]) + '</span>'
+           + appendCssSepWithColon(decl[3])
+           + renderCssValue(decl[4])
+           + appendCssEndRun(decl[5]);
+    }
+
+    return escapeHtml(line);
+  }
+
+  function renderStyleOpenLine(line) {
+    const m = line.match(/^(.*?)(<style\b[^>]*>)(.*)$/i);
+    if (!m) return escapeHtml(line);
+    return mdLine(m[1], false)
+         + '<span class="html">' + escapeHtml(m[2]) + '</span>'
+         + (m[3] ? cssLine(m[3]) : '');
+  }
+
+  function renderStyleCloseLine(line) {
+    const m = line.match(/^(.*?)(<\/style\s*>)(.*)$/i);
+    if (!m) return escapeHtml(line);
+    return (m[1] ? cssLine(m[1]) : '')
+         + '<span class="html">' + escapeHtml(m[2]) + '</span>'
+         + (m[3] ? mdLine(m[3], false) : '');
+  }
+
+  // --- JS-in-<script> tokenizer ----------------------------------------------
+  const JS_KEYWORDS = new Set([
+    'abstract','as','async','await','break','case','catch','class','const','continue',
+    'debugger','default','delete','do','else','enum','export','extends','false','finally',
+    'for','from','function','get','if','import','in','instanceof','interface','let','new',
+    'null','of','package','private','protected','public','return','set','static','super',
+    'switch','this','throw','true','try','type','typeof','undefined','var','void','while',
+    'with','yield'
+  ]);
+
+  function findStringEnd(line, start, quote) {
+    for (let i = start + 1; i < line.length; i++) {
+      const c = line[i];
+      if (c === '\\') { i++; continue; }
+      if (c === quote) return i;
+    }
+    return -1;
+  }
+
+  // Returns { html, blockOpen } so the multi-line block-comment state survives lines.
+  function jsLine(line, blockOpen) {
+    let out = '';
+    let i = 0;
+    const n = line.length;
+
+    while (i < n) {
+      if (blockOpen) {
+        const end = line.indexOf('*/', i);
+        if (end < 0) {
+          out += '<span class="js-comment">' + escapeHtml(line.slice(i)) + '</span>';
+          return { html: out, blockOpen: true };
+        }
+        out += '<span class="js-comment">' + escapeHtml(line.slice(i, end + 2)) + '</span>';
+        i = end + 2;
+        blockOpen = false;
+        continue;
+      }
+
+      const c = line[i];
+      const c2 = i + 1 < n ? line[i + 1] : '';
+
+      if (c === '/' && c2 === '/') {
+        out += '<span class="js-comment">' + escapeHtml(line.slice(i)) + '</span>';
+        return { html: out, blockOpen: false };
+      }
+      if (c === '/' && c2 === '*') {
+        const end = line.indexOf('*/', i + 2);
+        if (end < 0) {
+          out += '<span class="js-comment">' + escapeHtml(line.slice(i)) + '</span>';
+          return { html: out, blockOpen: true };
+        }
+        out += '<span class="js-comment">' + escapeHtml(line.slice(i, end + 2)) + '</span>';
+        i = end + 2;
+        continue;
+      }
+      if (c === '\'' || c === '"' || c === '`') {
+        const end = findStringEnd(line, i, c);
+        if (end > i) {
+          out += '<span class="js-str">' + escapeHtml(line.slice(i, end + 1)) + '</span>';
+          i = end + 1;
+          continue;
+        }
+        out += '<span class="js-str">' + escapeHtml(line.slice(i)) + '</span>';
+        return { html: out, blockOpen: false };
+      }
+      if ((c >= '0' && c <= '9') || (c === '.' && c2 >= '0' && c2 <= '9')) {
+        const start = i;
+        while (i < n && ((line[i] >= '0' && line[i] <= '9') || line[i] === '.')) i++;
+        out += '<span class="js-num">' + escapeHtml(line.slice(start, i)) + '</span>';
+        continue;
+      }
+      if (/[A-Za-z_$]/.test(c)) {
+        const start = i;
+        while (i < n && /[A-Za-z0-9_$]/.test(line[i])) i++;
+        const word = line.slice(start, i);
+        out += JS_KEYWORDS.has(word)
+          ? '<span class="js-kw">' + escapeHtml(word) + '</span>'
+          : escapeHtml(word);
+        continue;
+      }
+
+      out += escapeHtml(c);
+      i++;
+    }
+    return { html: out, blockOpen };
+  }
+
+  function renderScriptOpenLine(line, blockOpenRef) {
+    const m = line.match(/^(.*?)(<script\b[^>]*>)(.*)$/i);
+    if (!m) return escapeHtml(line);
+    let out = mdLine(m[1], false) + '<span class="html">' + escapeHtml(m[2]) + '</span>';
+    if (m[3]) {
+      const r = jsLine(m[3], blockOpenRef.value);
+      out += r.html;
+      blockOpenRef.value = r.blockOpen;
+    }
+    return out;
+  }
+
+  function renderScriptCloseLine(line, blockOpenRef) {
+    // Character class on the final letter dodges a premature tag close in this <script> block.
+    const m = line.match(/^(.*?)(<\/scrip[t]\s*>)(.*)$/i);
+    if (!m) return escapeHtml(line);
+    let out = '';
+    if (m[1]) {
+      const r = jsLine(m[1], blockOpenRef.value);
+      out += r.html;
+      blockOpenRef.value = r.blockOpen;
+    }
+    out += '<span class="html">' + escapeHtml(m[2]) + '</span>';
+    if (m[3]) out += mdLine(m[3], false);
+    return out;
+  }
+
+  function highlight(text) {
+    const lines = text.split('\n');
+    const out = [];
+    let inFm = false;
+    let fmConsumed = false;
+    let inFence = false;
+    let inStyle = false;
+    let inScript = false;
+    const blockOpenRef = { value: false };
+
+    for (let k = 0; k < lines.length; k++) {
+      const line = lines[k];
+      const trimmed = line.trimEnd();
+
+      // YAML frontmatter delimiter
+      if (trimmed === '---' && !inFence && !inStyle && !inScript) {
+        if (!fmConsumed && k === 0) {
+          inFm = true;
+          fmConsumed = true;
+          out.push('<span class="yp">---</span>');
+          continue;
+        } else if (inFm) {
+          inFm = false;
+          out.push('<span class="yp">---</span>');
+          continue;
+        }
+      }
+
+      if (inFm) {
+        out.push(yamlLine(line));
+        continue;
+      }
+
+      // Code fence toggle
+      if (!inStyle && !inScript && /^```/.test(line.trim())) {
+        out.push('<span class="md-codeblock">' + escapeHtml(line) + '</span>');
+        inFence = !inFence;
+        continue;
+      }
+
+      // <style> open
+      if (!inFence && !inStyle && !inScript && /<style\b[^>]*>/i.test(line)) {
+        out.push(renderStyleOpenLine(line));
+        inStyle = true;
+        continue;
+      }
+      // </style> close
+      if (inStyle && /<\/style\s*>/i.test(line)) {
+        out.push(renderStyleCloseLine(line));
+        inStyle = false;
+        continue;
+      }
+      if (inStyle) {
+        out.push(cssLine(line));
+        continue;
+      }
+
+      // <script> open
+      if (!inFence && !inScript && /<script\b[^>]*>/i.test(line)) {
+        out.push(renderScriptOpenLine(line, blockOpenRef));
+        inScript = true;
+        continue;
+      }
+      // </scr_ipt> close (character class on the final letter dodges premature tag close)
+      if (inScript && /<\/scrip[t]\s*>/i.test(line)) {
+        out.push(renderScriptCloseLine(line, blockOpenRef));
+        inScript = false;
+        blockOpenRef.value = false;
+        continue;
+      }
+      if (inScript) {
+        const r = jsLine(line, blockOpenRef.value);
+        blockOpenRef.value = r.blockOpen;
+        out.push(r.html);
+        continue;
+      }
+
+      out.push(mdLine(line, inFence));
+    }
+    return out.join('\n');
+  }
+
+  function getCaretOffset(root) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return 0;
+    const range = sel.getRangeAt(0);
+    if (!root.contains(range.endContainer)) return 0;
+    const pre = range.cloneRange();
+    pre.selectNodeContents(root);
+    pre.setEnd(range.endContainer, range.endOffset);
+    return pre.toString().length;
+  }
+
+  function setCaretOffset(root, offset) {
+    const sel = window.getSelection();
+    if (!sel) return;
+    let consumed = 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      const next = consumed + node.nodeValue.length;
+      if (offset <= next) {
+        const range = document.createRange();
+        range.setStart(node, offset - consumed);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return;
+      }
+      consumed = next;
+    }
+    const range = document.createRange();
+    range.selectNodeContents(root);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function rehighlight() {
+    const text = editor.innerText;
+    const offset = getCaretOffset(editor);
+    editor.innerHTML = highlight(text);
+    setCaretOffset(editor, offset);
+  }
+
+  // Push text to host. Debounced one rAF so we batch keystrokes.
+  let outgoingScheduled = false;
+  function postToHost(message) {
+    if (window.PostXINGNative && typeof window.PostXINGNative.postToHost === 'function') {
+      window.PostXINGNative.postToHost(message);
+    } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+      window.chrome.webview.postMessage(message);
+    }
+  }
+  function scheduleOutgoing() {
+    if (outgoingScheduled || suppressOutgoing) return;
+    outgoingScheduled = true;
+    requestAnimationFrame(() => {
+      outgoingScheduled = false;
+      const text = editor.innerText;
+      if (text === lastSentText) return;
+      lastSentText = text;
+      postToHost(JSON.stringify({ type: 'change', text }));
+    });
+  }
+
+  editor.addEventListener('input', () => {
+    rehighlight();
+    scheduleOutgoing();
+  });
+
+  // Paste as plain text (strip styles from the OS clipboard).
+  editor.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(document.createTextNode(text));
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    rehighlight();
+    scheduleOutgoing();
+  });
+
+  // Tab inserts spaces instead of focus-jumping.
+  editor.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      document.execCommand('insertText', false, '  ');
+    }
+  });
+
+  function decodeBase64Utf8(b64) {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder('utf-8').decode(bytes);
+  }
+
+  // Diagnostic ring kept only as an in-memory trace. Earlier we also painted it into the
+  // editor body, but the file-side bridge.log (written by EditorPage on every message)
+  // covers the same surface without flashing diagnostic text in front of post content.
+  const diagLog = [];
+  function diag(line) {
+    diagLog.push('[' + Date.now() + '] ' + line);
+  }
+  diag('js loaded');
+
+  // C# → JS API.
+  window.PostXING = {
+    setText(text) {
+      suppressOutgoing = true;
+      const safe = text || '';
+      editor.innerHTML = highlight(safe);
+      lastSentText = safe;
+      setCaretOffset(editor, 0);
+      suppressOutgoing = false;
+    },
+    setTextB64(b64) {
+      try {
+        const decoded = decodeBase64Utf8(b64 || '');
+        diag('setTextB64 received ' + (b64 || '').length + ' b64 chars -> ' + decoded.length + ' decoded chars');
+        window.PostXING.setText(decoded);
+      } catch (err) {
+        diag('setTextB64 error: ' + err.message);
+      }
+    },
+    setTheme(theme) {
+      diag('setTheme ' + theme);
+      document.body.classList.toggle('light', theme === 'light');
+    },
+    focus() {
+      editor.focus();
+    },
+    getDiag() {
+      return diagLog.join('\n');
+    }
+  };
+
+  // Incoming messages from C# arrive via the injected dispatch script in
+  // EditorPage.OnEditorWebViewHandlerChanged, which routes window.chrome.webview
+  // 'message' events to window.PostXING.handleHostMessage.
+  window.PostXING.handleHostMessage = function handleHostMessage(raw) {
+    try {
+      const msg = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (!msg || !msg.type) return;
+      if (msg.type === 'setText') window.PostXING.setText(msg.text || '');
+      else if (msg.type === 'setTheme') window.PostXING.setTheme(msg.theme || 'dark');
+      else diag('unknown host msg type: ' + msg.type);
+    } catch (err) {
+      diag('bad host message: ' + err.message);
+    }
+  };
+  // Drain any messages that landed before this handler was registered.
+  if (window.__earlyHostMessages && window.__earlyHostMessages.length) {
+    diag('draining ' + window.__earlyHostMessages.length + ' early host msgs');
+    for (const m of window.__earlyHostMessages) window.PostXING.handleHostMessage(m);
+    window.__earlyHostMessages = [];
+  }
+
+  // Tell host we're ready. The chrome.webview channel is injected at document-create time,
+  // so it's already there. No polling needed.
+  function announceReady() {
+    if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+      diag('ready sent');
+      postToHost(JSON.stringify({ type: 'ready' }));
+    } else {
+      diag('chrome.webview missing — bridge cannot work in this WebView');
+    }
+  }
+  if (document.readyState === 'complete') {
+    announceReady();
+  } else {
+    window.addEventListener('load', announceReady);
+  }
+})();
+</script>
+</body>
+</html>

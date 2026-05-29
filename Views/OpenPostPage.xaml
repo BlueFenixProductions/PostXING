@@ -12,17 +12,17 @@
         <Label Grid.Row="0" Style="{StaticResource Kicker}" Text="[ open post ]"
                SemanticProperties.HeadingLevel="Level1" />
 
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Entries}" SelectionMode="None"
+        <CollectionView Grid.Row="1"
+                        x:Name="EntriesView"
+                        ItemsSource="{Binding Entries}"
+                        SelectionMode="Single"
+                        SelectionChanged="OnEntrySelected"
                         SemanticProperties.Description="Available posts">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:PostEntry">
                     <Grid Padding="8,4" ColumnDefinitions="*,Auto" ColumnSpacing="12">
                         <Label Grid.Column="0" Text="{Binding DisplayName}" FontSize="13" FontFamily="HackRegular"
-                               TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}">
-                            <Label.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding Path=BindingContext.SelectCommand, Source={x:Reference ThisPage}}" CommandParameter="{Binding .}" />
-                            </Label.GestureRecognizers>
-                        </Label>
+                               TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
                         <Label Grid.Column="1" Text="{Binding Tag}" FontSize="11" FontFamily="HackRegular"
                                CharacterSpacing="2"
                                TextColor="{AppThemeBinding Light={StaticResource Paper600}, Dark={StaticResource Paper500}}"
