@@ -22,15 +22,20 @@ All four of these work no-args from the root:
 ```powershell
 dotnet run                 # launches the App
 dotnet build               # builds the App csproj + its referenced libs
-bun dev                    # alias for `dotnet run`           (npm run dev also works)
-bun test                   # runs all tests via the slnx       (npm run test also works)
+bun dev                    # fast: self-clean + launch the built app, no rebuild (npm run dev too)
+bun dev:build              # self-clean + incremental build, then launch (after code/asset edits)
+bun xunit                  # runs all tests via the slnx       (npm run xunit also works)
 ```
+
+The test script is named `xunit`, **not** `test`, on purpose: `bun test` is a Bun built-in that runs Bun's own JS/TS test runner and ignores the `package.json` script, so a `test` script would silently never run under `bun`. `bun xunit` (no collision) wraps `dotnet test`. Don't rename it back to `test`.
 
 `bun build` / `npm run build` runs `dotnet build solution/PostXING4.slnx -c Release`, which builds the whole graph (App + libs + tests) and is what you want for CI parity.
 
+`bun dev` and `bun dev:build` both run `scripts/dev.ps1`, which first force-kills any leftover `PostXING.App`. A stale instance — from a closed terminal or a Ctrl-C that left the GUI process alive — locks the apphost `.exe`/`.dll`s in `bin\`, so the next build or launch can't overwrite them and fails (commonly exit `58`). After the kill, **`bun dev` launches the already-built Debug app directly** for a near-instant start (no rebuild), while **`bun dev:build` runs an incremental `dotnet build` first** — use it after you change C#, XAML, or the editor's `index.html` (assets only land in `bin\` on a build). Plain `dotnet run` neither self-cleans nor is fast: it rebuilds the whole MAUI app every launch (~20–50s here), so prefer the `bun` scripts. The dev script is ASCII-only by the `.ps1` rule; if it ever needs a non-ASCII char, use a `[char]` escape.
+
 ### Why this layout
 
-The .NET CLI errors with MSB1011 if there are both a `.csproj` and a `.slnx` in the CWD, except `dotnet run` which has special csproj-finding logic. To make `dotnet run` AND `dotnet build` both work no-args at the root, the slnx had to move to `solution/PostXING4.slnx`. The `package.json` scripts wrap the slnx-required commands (`dotnet test`, full-graph builds) so `bun test` and `bun dev` work transparently.
+The .NET CLI errors with MSB1011 if there are both a `.csproj` and a `.slnx` in the CWD, except `dotnet run` which has special csproj-finding logic. To make `dotnet run` AND `dotnet build` both work no-args at the root, the slnx had to move to `solution/PostXING4.slnx`. The `package.json` scripts wrap the slnx-required commands (`dotnet test`, full-graph builds) so `bun xunit` and `bun dev` work transparently.
 
 Don't move the slnx back to root — it breaks `dotnet build` and `dotnet run`. Don't remove the `<Compile Remove="src\**" />` block in `PostXING.App.csproj` — without it the root csproj sweeps up sibling project sources.
 
@@ -81,10 +86,11 @@ Posts and drafts live in two flat top-level folders inside the user's local fold
 ## UI conventions
 
 - **Editor body** uses Hack-Regular at 14pt with a 2px margin. Hack TTFs live in `Resources/Fonts/` (Regular + Bold, MIT/OFL from `source-foundry/Hack`) and are registered in `MauiProgram.ConfigureFonts`. Don't switch to a system font without asking.
-- **No persistent chrome.** The only navigation surface is a thin status bar at the bottom of `EditorPage`. New / Open / Settings / Save / Publish are tap-labels in that bar; Save and Publish are hidden until `IsDirty`.
+- **`OpenPostPage` is the Shell root (the home screen).** The app launches into the Open list, not a blank editor. `AppShell.xaml` declares the single `ShellContent` as `OpenPostPage` (route `open`); `EditorPage` is a pushed route (`Routing.RegisterRoute("editor", …)`). Selecting a post or tapping `new` on the home screen pushes the editor on top; the editor's `open` is `GoToAsync("..")`, which pops back home. Don't restore `EditorPage` as the root — that's the old "launch into a new post" default that was deliberately replaced.
+- **No persistent chrome.** The only navigation surface is a thin status bar at the bottom of each page. On `EditorPage`: New / Open / Settings / Save / Publish (Save and Publish hidden until `IsDirty`). On the `OpenPostPage` home screen: `new` (→ blank editor + title prompt) / `settings`.
 - **New posts go through a full-window title-prompt overlay** driven by `EditorViewModel.ShowTitlePrompt`. The editor starts empty; the prompt seeds the YAML frontmatter (title, author, date, draft, tags, description) and an H1 heading from the title. Don't auto-seed frontmatter without going through the prompt — the blank-canvas cure depends on it.
 - **The gh terminal page** (`Views/GhTerminalPage.xaml`, route `terminal`) is intentionally dark + monospace + green-on-black. It accepts a `gh` subcommand and an optional stdin block (used for `auth login --with-token`). It's the canonical in-app PAT entry point; don't add a Settings PAT field.
-- **Inter-page post handoff** uses `IPendingPostBox` (singleton). `OpenPostPage` puts the selected `OpenedPost`; `EditorPage.OnAppearing` takes it. Don't refactor to Shell query strings or `MessagingCenter` — the box is simple and untyped-route-friendly.
+- **Inter-page post handoff** uses `IPendingPostBox` (singleton). On select, `OpenPostViewModel` fires `PostOpened` (the page calls `box.Put`) then `EditorRequested` (the page calls `GoToAsync("editor")`); `EditorPage.OnAppearing` takes the post. The `new` path fires `EditorRequested` with an empty box, so the editor falls through to its title-prompt overlay. Don't refactor to Shell query strings or `MessagingCenter` — the box is simple and untyped-route-friendly.
 
 ## Branch model
 
@@ -135,7 +141,7 @@ This file is the canonical pickup document. The repo is on `px-modernized`. Afte
 ```powershell
 dotnet run                      # launches the App
 dotnet build                    # App + libs
-bun test    # or npm run test   # full slnx test pass
+bun xunit   # or npm run xunit  # full slnx test pass
 bun build   # or npm run build  # full slnx build
 ```
 

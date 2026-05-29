@@ -1,6 +1,6 @@
 namespace PostXING.ViewModels;
 
-public sealed record LocalPostFile(string FullPath, string RelativePath);
+public sealed record LocalPostFile(string FullPath, string RelativePath, DateTimeOffset LastWriteTimeUtc);
 
 public interface ILocalPostStore
 {

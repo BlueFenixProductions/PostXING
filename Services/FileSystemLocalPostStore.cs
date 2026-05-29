@@ -8,8 +8,11 @@ public sealed class FileSystemLocalPostStore : ILocalPostStore
     {
         if (!Directory.Exists(folder)) return [];
         return Directory.EnumerateFiles(folder, "*.md", SearchOption.AllDirectories)
-            .Select(p => new LocalPostFile(p, Path.GetRelativePath(folder, p).Replace('\\', '/')))
-            .OrderBy(f => f.RelativePath, StringComparer.Ordinal)
+            .Select(p => new LocalPostFile(
+                p,
+                Path.GetRelativePath(folder, p).Replace('\\', '/'),
+                new DateTimeOffset(File.GetLastWriteTimeUtc(p), TimeSpan.Zero)))
+            .OrderByDescending(f => f.LastWriteTimeUtc)
             .ToList();
     }
 

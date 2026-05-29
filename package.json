@@ -4,8 +4,9 @@
   "private": true,
   "description": "PostXING 4.0 - Windows-first .NET 10 MAUI Markdown blog editor",
   "scripts": {
-    "dev": "dotnet run",
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1",
+    "dev:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Build",
     "build": "dotnet build solution/PostXING4.slnx -c Release",
-    "test": "dotnet test solution/PostXING4.slnx -c Release"
+    "xunit": "dotnet test solution/PostXING4.slnx -c Release"
   }
 }

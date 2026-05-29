@@ -8,6 +8,26 @@
              BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
              Shell.NavBarIsVisible="False"
              Title="Open post">
+    <!-- Minimum-chrome MenuBar mirroring the editor's: only canonical Windows keyboard
+         accelerators live here. "open" / "save" / "publish" are editor-only actions and have
+         no meaning on the list screen, so the home menu carries just "new" and "settings".
+         All visible affordances stay in the status bar at the bottom of the page. -->
+    <ContentPage.MenuBarItems>
+        <MenuBarItem Text="post">
+            <MenuFlyoutItem Text="new" Command="{Binding NewPostCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Ctrl" Key="N" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem Text="settings" Command="{Binding OpenSettingsCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Ctrl" Key="," />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+        </MenuBarItem>
+    </ContentPage.MenuBarItems>
+
     <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="8">
         <Label Grid.Row="0" Style="{StaticResource Kicker}" Text="[ open post ]"
                SemanticProperties.HeadingLevel="Level1" />
@@ -35,12 +55,12 @@
         <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="0">
             <Label Grid.Column="0" Style="{StaticResource StatusBarRead}" Text="{Binding StatusMessage}" />
             <HorizontalStackLayout Grid.Column="2" Spacing="2">
+                <Button Text="new" Command="{Binding NewPostCommand}"
+                        Style="{StaticResource StatusBarButton}"
+                        SemanticProperties.Description="New post" />
                 <Button Text="settings" Command="{Binding OpenSettingsCommand}"
                         Style="{StaticResource StatusBarButton}"
                         SemanticProperties.Description="Open settings" />
-                <Button Text="cancel" Command="{Binding CancelCommand}"
-                        Style="{StaticResource StatusBarButton}"
-                        SemanticProperties.Description="Cancel open post" />
             </HorizontalStackLayout>
         </Grid>
     </Grid>

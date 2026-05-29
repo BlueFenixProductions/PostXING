@@ -13,7 +13,7 @@ public partial class OpenPostPage : ContentPage
         BindingContext = _vm = vm;
         _box = box;
         vm.PostOpened += (_, e) => box.Put(e);
-        vm.CloseRequested += async (_, _) => await Shell.Current.GoToAsync("..");
+        vm.EditorRequested += async (_, _) => await Shell.Current.GoToAsync("editor");
         vm.SettingsRequested += async (_, _) => await Shell.Current.GoToAsync("settings");
     }
 

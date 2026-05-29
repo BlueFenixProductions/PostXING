@@ -57,7 +57,9 @@ public partial class EditorPage : ContentPage
         BindingContext = _vm = vm;
         _box = box;
 
-        vm.OpenPostRequested += async (_, _) => await Shell.Current.GoToAsync("open");
+        // Open is the Shell root and the editor is pushed on top of it, so "open" pops
+        // back to the home screen rather than pushing a second copy of it.
+        vm.OpenPostRequested += async (_, _) => await Shell.Current.GoToAsync("..");
         vm.SettingsRequested += async (_, _) => await Shell.Current.GoToAsync("settings");
         vm.PropertyChanged += OnViewModelPropertyChanged;
 

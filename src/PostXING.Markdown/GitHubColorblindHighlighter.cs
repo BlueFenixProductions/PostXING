@@ -23,6 +23,7 @@ namespace PostXING.Markdown;
 ///   css-prop css property    css-val css value
 ///   css-punct css { } : ;
 ///   js-kw  js keyword       js-str  js string literal
+///   js-key js object-literal key (identifier before a colon)
 ///   js-num js number        js-comment js // and /* */ comment
 /// </summary>
 public sealed class GitHubColorblindHighlighter : IMarkdownHighlighter
@@ -30,6 +31,11 @@ public sealed class GitHubColorblindHighlighter : IMarkdownHighlighter
     public string HighlightToHtml(string markdown)
     {
         if (string.IsNullOrEmpty(markdown)) return string.Empty;
+
+        // Windows files commonly carry a UTF-8 BOM and/or CRLF endings. A leading BOM defeats the
+        // "--- on line 0" frontmatter test, and a trailing \r makes every per-line regex fail its
+        // `$` anchor — so the whole document renders raw/unhighlighted. Normalize to BOM-less LF.
+        markdown = markdown.TrimStart('\uFEFF').Replace("\r\n", "\n").Replace("\r", "\n");
 
         var lines = markdown.Split('\n');
         var out_ = new StringBuilder(markdown.Length + 64);
@@ -481,7 +487,7 @@ public sealed class GitHubColorblindHighlighter : IMarkdownHighlighter
                 continue;
             }
 
-            // Identifier / keyword
+            // Identifier / keyword / object-literal key
             if (char.IsLetter(c) || c == '_' || c == '$')
             {
                 var start = i;
@@ -489,6 +495,9 @@ public sealed class GitHubColorblindHighlighter : IMarkdownHighlighter
                 var word = line.Substring(start, i - start);
                 if (JsKeywords.Contains(word))
                     sb.Append("<span class=\"js-kw\">").Append(Escape(word)).Append("</span>");
+                else if (i < n && line[i] == ':')
+                    // object-literal key: identifier directly followed by a colon -> orange, like yaml keys
+                    sb.Append("<span class=\"js-key\">").Append(Escape(word)).Append("</span>");
                 else
                     sb.Append(Escape(word));
                 continue;

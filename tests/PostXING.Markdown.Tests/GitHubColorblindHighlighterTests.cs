@@ -340,6 +340,18 @@ public sealed class GitHubColorblindHighlighterTests
     }
 
     [Fact]
+    public void Js_object_literal_key_is_classed()
+    {
+        // Identifier immediately followed by a colon is a property key -> orange (like yaml keys).
+        var input = "<script>\nconst o = { name: 'x', avatar: '/a.png' };\n</script>\n";
+        var result = _sut.HighlightToHtml(input);
+
+        result.ShouldContain("class=\"js-key\"");
+        result.ShouldContain(">name<");
+        result.ShouldContain(">avatar<");
+    }
+
+    [Fact]
     public void Js_string_inside_script_block_is_classed()
     {
         var input = "<script>\nconst x = 'hello';\n</script>\n";
@@ -450,5 +462,36 @@ public sealed class GitHubColorblindHighlighterTests
 
         // The `.foo` selector is css-sel, not html-attr or html. (Spot check.)
         result.ShouldContain("class=\"css-sel\"");
+    }
+
+    [Fact]
+    public void Crlf_line_endings_do_not_break_frontmatter_highlighting()
+    {
+        // Windows-authored files arrive with \r\n. Before line-ending normalization the trailing
+        // \r defeated every per-line regex (the `$` anchor won't match before a \r), so the whole
+        // frontmatter rendered as raw, unhighlighted (white) text.
+        var input = "---\r\ntitle: Hello World\r\n---\r\n";
+        var result = _sut.HighlightToHtml(input);
+
+        result.ShouldContain("class=\"yk\"");
+        result.ShouldContain(">title<");
+        result.ShouldContain("class=\"ys\"");
+        result.ShouldContain(">Hello World<");
+        result.ShouldNotContain("\r");
+    }
+
+    [Fact]
+    public void Leading_utf8_bom_does_not_break_frontmatter_detection()
+    {
+        // A leading BOM made line 0 != "---", so frontmatter was never detected and the block
+        // fell back to plain markdown.
+        var input = "\uFEFF---\ntitle: Hello\n---\n";
+        var result = _sut.HighlightToHtml(input);
+
+        result.ShouldContain("class=\"yk\"");
+        result.ShouldContain(">title<");
+        result.ShouldContain("class=\"ys\"");
+        result.ShouldContain(">Hello<");
+        result.ShouldNotContain("\uFEFF");
     }
 }

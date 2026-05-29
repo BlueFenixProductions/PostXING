@@ -4,5 +4,5 @@
        xmlns:views="clr-namespace:PostXING.App.Views"
        x:Class="PostXING.App.AppShell"
        Shell.FlyoutBehavior="Disabled">
-    <ShellContent Title="Editor" ContentTemplate="{DataTemplate views:EditorPage}" Route="editor" />
+    <ShellContent Title="Open" ContentTemplate="{DataTemplate views:OpenPostPage}" Route="open" />
 </Shell>

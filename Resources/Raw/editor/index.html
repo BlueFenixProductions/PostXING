@@ -84,7 +84,7 @@ html, body {
   pointer-events: none;
 }
 
-.yk { color: var(--keyword); }
+.yk { color: var(--variable); }
 .ys { color: var(--string); }
 .yn { color: var(--number); }
 .yp { color: var(--punctuation); }
@@ -114,6 +114,7 @@ html, body {
 .css-val { color: var(--string); }
 .css-punct { color: var(--punctuation); }
 .js-kw { color: var(--keyword); }
+.js-key { color: var(--variable); }
 .js-str { color: var(--string); }
 .js-num { color: var(--number); }
 .js-comment { color: var(--comment); font-style: italic; }
@@ -553,9 +554,14 @@ html, body {
         const start = i;
         while (i < n && /[A-Za-z0-9_$]/.test(line[i])) i++;
         const word = line.slice(start, i);
-        out += JS_KEYWORDS.has(word)
-          ? '<span class="js-kw">' + escapeHtml(word) + '</span>'
-          : escapeHtml(word);
+        if (JS_KEYWORDS.has(word)) {
+          out += '<span class="js-kw">' + escapeHtml(word) + '</span>';
+        } else if (line[i] === ':') {
+          // object-literal key: identifier directly followed by a colon -> orange, like yaml keys
+          out += '<span class="js-key">' + escapeHtml(word) + '</span>';
+        } else {
+          out += escapeHtml(word);
+        }
         continue;
       }
 
@@ -593,6 +599,11 @@ html, body {
   }
 
   function highlight(text) {
+    // Windows files commonly carry a UTF-8 BOM and/or CRLF endings. A leading BOM defeats the
+    // "--- on line 0" frontmatter test, and a trailing \r makes every per-line regex fail its
+    // `$` anchor (and `.` won't cross \r) — so the whole document renders raw/unhighlighted.
+    // Normalize to BOM-less LF before tokenizing.
+    text = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
     const lines = text.split('\n');
     const out = [];
     let inFm = false;
