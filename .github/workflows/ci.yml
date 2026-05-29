@@ -21,11 +21,11 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-dotnet@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
@@ -33,27 +33,27 @@ jobs:
         run: dotnet workload install maui-windows --skip-sign-check
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
 
-      - name: Restore
-        run: dotnet restore solution/PostXING4.slnx
-
-      # No --no-restore: the MAUI App builds RID-specific (win-x64), and the
-      # solution-level restore above doesn't fetch that runtime pack, so letting
-      # the build restore is what pulls it (NETSDK1112 otherwise).
+      # `bun run build` -> scripts/build.ps1: version-stamps, then builds the whole graph
+      # (App included). It restores as part of the build (no --no-restore) so the MAUI App's
+      # RID-specific win-x64 runtime pack gets pulled (NETSDK1112 otherwise). Bare `bun build`
+      # would hit Bun's bundler, so it must be `bun run build`.
       - name: Build
-        run: dotnet build solution/PostXING4.slnx -c Release
+        run: bun run build
 
+      # Reuse the build above with --no-build so the version stamp is preserved and nothing
+      # recompiles; coverage + trx args are forwarded to the xunit script after `--`.
       - name: Test
-        run: dotnet test solution/PostXING4.slnx -c Release --no-build --collect:"XPlat Code Coverage" --logger "trx"
+        run: bun run xunit -- --no-build --collect:"XPlat Code Coverage" --logger trx
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ github.run_id }}
           path: '**/TestResults/*.trx'
