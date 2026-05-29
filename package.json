@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1",
     "dev:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Build",
-    "build": "dotnet build solution/PostXING4.slnx -c Release",
+    "bump": "node version.mjs",
+    "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1",
     "xunit": "dotnet test solution/PostXING4.slnx -c Release"
   }
 }

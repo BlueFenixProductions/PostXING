@@ -11,7 +11,14 @@ $exe = 'bin/Debug/net10.0-windows10.0.19041.0/win-x64/PostXING.App.exe'
 Get-Process PostXING.App -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 if ($Build) {
-    dotnet build -v q
+    node version.mjs
+    if ($LASTEXITCODE -ne 0) { Write-Host 'version.mjs failed - not launching.'; exit $LASTEXITCODE }
+    # .version is major.minor.patch.build; split into the MSBuild properties.
+    $full = (Get-Content '.version' -Raw).Trim()
+    $parts = $full.Split('.')
+    $display = ($parts[0..2] -join '.')
+    $appver = $parts[3]
+    dotnet build -v q -p:Version=$full -p:ApplicationDisplayVersion=$display -p:ApplicationVersion=$appver
     if ($LASTEXITCODE -ne 0) { Write-Host 'Build failed - not launching.'; exit $LASTEXITCODE }
 }
 

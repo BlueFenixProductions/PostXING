@@ -1,3 +1,6 @@
+# Version stamp (generated each build by version.mjs; not committed)
+.version
+
 # Build output
 **/bin/
 **/obj/
