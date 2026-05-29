@@ -24,14 +24,14 @@ dotnet run                 # launches the App
 dotnet build               # builds the App csproj + its referenced libs
 bun dev                    # fast: self-clean + launch the built app, no rebuild (npm run dev too)
 bun dev:build              # self-clean + version-stamp + incremental build, then launch (after code/asset edits)
-bun build                  # full slnx Release build, version-stamped (CI parity; npm run build too)
+bun run build              # full slnx Release build, version-stamped (CI parity; npm run build too)
 bun xunit                  # runs all tests via the slnx       (npm run xunit also works)
 bun bump                   # regenerate .version only (date-based version + hotfix counter)
 ```
 
 The test script is named `xunit`, **not** `test`, on purpose: `bun test` is a Bun built-in that runs Bun's own JS/TS test runner and ignores the `package.json` script, so a `test` script would silently never run under `bun`. `bun xunit` (no collision) wraps `dotnet test`. Don't rename it back to `test`.
 
-`bun build` / `npm run build` runs `scripts/build.ps1`, which stamps the version (regenerates `.version` and passes it to MSBuild — see **Version stamping** below) and then runs `dotnet build solution/PostXING4.slnx -c Release` over the whole graph (App + libs + tests). It's what you want for CI parity. It deliberately routes through a `.ps1` rather than calling `dotnet` inline so the `.version` read behaves identically under `bun` and `npm` (cmd.exe, which `npm` uses on Windows, has no `$(...)` command substitution).
+`bun run build` / `npm run build` runs `scripts/build.ps1`, which stamps the version (regenerates `.version` and passes it to MSBuild — see **Version stamping** below) and then runs `dotnet build solution/PostXING4.slnx -c Release` over the whole graph (App + libs + tests). It's what you want for CI parity, and it's what the GitHub Actions workflow runs (`bun run build` + `bun run xunit`). Use `bun run build`, **not** bare `bun build` — `build` is a Bun builtin (the bundler, errors with "Missing entrypoints"), the same collision behind the `test` → `xunit` rename above. It deliberately routes through a `.ps1` rather than calling `dotnet` inline so the `.version` read behaves identically under `bun` and `npm` (cmd.exe, which `npm` uses on Windows, has no `$(...)` command substitution).
 
 `bun dev` and `bun dev:build` both run `scripts/dev.ps1`, which first force-kills any leftover `PostXING.App`. A stale instance — from a closed terminal or a Ctrl-C that left the GUI process alive — locks the apphost `.exe`/`.dll`s in `bin\`, so the next build or launch can't overwrite them and fails (commonly exit `58`). After the kill, **`bun dev` launches the already-built Debug app directly** for a near-instant start (no rebuild), while **`bun dev:build` stamps the version then runs an incremental `dotnet build`** — use it after you change C#, XAML, or the editor's `index.html` (assets only land in `bin\` on a build). Plain `dotnet run` neither self-cleans nor is fast: it rebuilds the whole MAUI app every launch (~20–50s here), so prefer the `bun` scripts. The `dev.ps1` / `build.ps1` scripts are ASCII-only by the `.ps1` rule; if one ever needs a non-ASCII char, use a `[char]` escape.
 
@@ -155,7 +155,7 @@ This file is the canonical pickup document. The active branch is `develop`. Afte
 dotnet run                      # launches the App
 dotnet build                    # App + libs
 bun xunit   # or npm run xunit  # full slnx test pass
-bun build   # or npm run build  # full slnx build
+bun run build  # or npm run build  # full slnx build
 ```
 
 If any of those fail, that is the first thing to fix — the layout (App csproj at root, slnx under `solution/`, `package.json` scripts) is load-bearing and documented in **Run / build / test from the repo root** above.
