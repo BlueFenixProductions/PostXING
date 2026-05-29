@@ -4,7 +4,7 @@ on:
   push:
     branches: ['**']
   pull_request:
-    branches: [main, stage, px-modernized]
+    branches: [main, stage, develop]
   workflow_dispatch:
 
 permissions:
@@ -42,8 +42,11 @@ jobs:
       - name: Restore
         run: dotnet restore solution/PostXING4.slnx
 
+      # No --no-restore: the MAUI App builds RID-specific (win-x64), and the
+      # solution-level restore above doesn't fetch that runtime pack, so letting
+      # the build restore is what pulls it (NETSDK1112 otherwise).
       - name: Build
-        run: dotnet build solution/PostXING4.slnx -c Release --no-restore
+        run: dotnet build solution/PostXING4.slnx -c Release
 
       - name: Test
         run: dotnet test solution/PostXING4.slnx -c Release --no-build --collect:"XPlat Code Coverage" --logger "trx"
