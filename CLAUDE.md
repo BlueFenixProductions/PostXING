@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **PostXING 4.0** — a greenfield **Windows-only** .NET 10 MAUI rewrite of the spirit of the original 2007 WinForms blog editor. Targets a Markdown + GitHub + static-site-generator workflow. Published by **Blue Fenix Productions LLC**; reverse-DNS app identity is `net.bluefenix.postxing`.
 
-This repository previously held a recovered decompilation of PostXING v2 from 2007. That work was shelved on 2026-05-28 and the entire decompiled tree was removed; the history remains in git up to commit `ca2ab1c`. Do not attempt to revive the decompilation.
+This repository previously held a recovered decompilation of PostXING v2 from 2007. That work was shelved on 2026-05-28 and the decompiled tree was removed from the rewrite line; the history remains in git up to commit `ca2ab1c`, and the legacy decompiled code now lives on the `px-decompiled` branch. Do not revive the decompilation on `develop` / `main`.
 
 ## Scope (hard)
 
@@ -107,8 +107,9 @@ Posts and drafts live in two flat top-level folders inside the user's local fold
 ## Branch model
 
 - `main` — production. Operator-push only. PRs from `stage` only. Linear history required.
-- `stage` — pre-production integration. PRs from `px-modernized`. Coverage gate.
-- `px-modernized` — active integration branch. Feature branches merge here.
+- `stage` — pre-production integration. PRs from `develop`. Coverage gate.
+- `develop` — active integration branch (formerly `px-modernized`). Feature branches merge here.
+- `px-decompiled` — frozen snapshot of the recovered 2007 decompilation (the pre-rewrite legacy code). Reference only; not in the px4 build / PR pipeline.
 - `post/<slug>-<date>` — short-lived branches created by the app for individual blog posts via `GitHubPublishService`.
 
 The app never pushes directly to `stage` or `main`.
@@ -148,7 +149,7 @@ Considered and rejected:
 
 ## Pickup
 
-This file is the canonical pickup document. The repo is on `px-modernized`. After a fresh clone (and `dotnet workload install maui-windows`), all four of these should succeed:
+This file is the canonical pickup document. The active branch is `develop`. After a fresh clone (and `dotnet workload install maui-windows`), all four of these should succeed:
 
 ```powershell
 dotnet run                      # launches the App
