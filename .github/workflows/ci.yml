@@ -1,10 +1,13 @@
 name: CI
 
 on:
+  # CI runs only on the gate branches, for both push and PR. Develop/feature pushes do
+  # NOT trigger it -- run CI on develop manually with `gh workflow run CI --ref develop`
+  # (workflow_dispatch) before opening a PR.
   push:
-    branches: ['**']
+    branches: [main]          # + stage once that branch exists
   pull_request:
-    branches: [main, stage, develop]
+    branches: [main]          # + stage once that branch exists
   workflow_dispatch:
 
 permissions:
