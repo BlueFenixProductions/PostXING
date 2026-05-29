@@ -15,6 +15,7 @@ public partial class OpenPostPage : ContentPage
         vm.PostOpened += (_, e) => box.Put(e);
         vm.EditorRequested += async (_, _) => await Shell.Current.GoToAsync("editor");
         vm.SettingsRequested += async (_, _) => await Shell.Current.GoToAsync("settings");
+        vm.AboutRequested += async (_, _) => await Shell.Current.GoToAsync("about");
     }
 
     protected override void OnAppearing()

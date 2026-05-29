@@ -26,6 +26,9 @@
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
         </MenuBarItem>
+        <MenuBarItem Text="help">
+            <MenuFlyoutItem Text="about" Command="{Binding AboutCommand}" />
+        </MenuBarItem>
     </ContentPage.MenuBarItems>
 
     <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="8">
@@ -61,6 +64,9 @@
                 <Button Text="settings" Command="{Binding OpenSettingsCommand}"
                         Style="{StaticResource StatusBarButton}"
                         SemanticProperties.Description="Open settings" />
+                <Button Text="about" Command="{Binding AboutCommand}"
+                        Style="{StaticResource StatusBarButton}"
+                        SemanticProperties.Description="About PostXING" />
             </HorizontalStackLayout>
         </Grid>
     </Grid>

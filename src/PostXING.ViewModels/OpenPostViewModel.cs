@@ -26,6 +26,7 @@ public sealed partial class OpenPostViewModel : ObservableObject
     public event EventHandler<OpenedPost>? PostOpened;
     public event EventHandler? EditorRequested;
     public event EventHandler? SettingsRequested;
+    public event EventHandler? AboutRequested;
 
     public OpenPostViewModel(IGitHubGateway gateway, ISettingsStore settings, ILocalPostStore local)
     {
@@ -146,6 +147,14 @@ public sealed partial class OpenPostViewModel : ObservableObject
         if (_navigated) return;
         _navigated = true;
         SettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void About()
+    {
+        if (_navigated) return;
+        _navigated = true;
+        AboutRequested?.Invoke(this, EventArgs.Empty);
     }
 
     // The home screen's "new" affordance: open a blank editor (empty pending box →

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PostXING.App.Views.AboutPage"
+             BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
+             Shell.NavBarIsVisible="False"
+             Title="About">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="720" HorizontalOptions="Center">
+
+                <Label Style="{StaticResource Kicker}" Text="[ about ]"
+                       SemanticProperties.HeadingLevel="Level1" />
+
+                <!-- Identity -->
+                <HorizontalStackLayout Spacing="16">
+                    <Label Text="PostXING" FontFamily="HackBold" FontSize="40"
+                           VerticalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper100}}"
+                           SemanticProperties.HeadingLevel="Level2" />
+                    <Border WidthRequest="64" HeightRequest="64" StrokeThickness="0"
+                            BackgroundColor="{StaticResource Ink1000}"
+                            VerticalOptions="Center" SemanticProperties.Description="PostXING app icon">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+                        <!-- Forge-amber glow: the guide's Glow-Phoenix recipe (0 0 24px rgba(c,a))
+                             recolored to ForgeAmber (#E08A2E). Brighter in dark mode where it also
+                             defines the badge edge against the Ink950 canvas; gentler in light. -->
+                        <Border.Shadow>
+                            <Shadow Radius="24" Offset="0,0"
+                                    Opacity="{AppThemeBinding Light=0.35, Dark=0.6}">
+                                <Shadow.Brush>
+                                    <SolidColorBrush Color="{StaticResource ForgeAmber}" />
+                                </Shadow.Brush>
+                            </Shadow>
+                        </Border.Shadow>
+                        <Image Source="postxing_logo.png" Aspect="AspectFit"
+                               WidthRequest="64" HeightRequest="64" />
+                    </Border>
+                </HorizontalStackLayout>
+                <Label Text="A blog editor reborn &#8212; from 2007 WinForms to .NET 10."
+                       FontFamily="HackRegular" FontSize="14"
+                       TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
+                <Label x:Name="VersionLabel" Style="{StaticResource StatusBarRead}" />
+
+                <BoxView Style="{StaticResource Hairline}" />
+
+                <!-- Heritage -->
+                <Label Style="{StaticResource Kicker}" Text="[ heritage ]"
+                       SemanticProperties.HeadingLevel="Level2" />
+                <Label FontFamily="HackRegular" FontSize="13"
+                       TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
+                       Text="The original PostXING shipped in 2007 as a WinForms desktop blog editor. This is a ground-up .NET 10 MAUI rewrite of that spirit, built around a Markdown + GitHub + static-site workflow &#8212; local files first, the gh CLI when you want it." />
+
+                <BoxView Style="{StaticResource Hairline}" />
+
+                <!-- Publisher -->
+                <Label Style="{StaticResource Kicker}" Text="[ publisher ]"
+                       SemanticProperties.HeadingLevel="Level2" />
+                <Label FontFamily="HackRegular" FontSize="13"
+                       TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
+                       Text="Blue Fenix Productions LLC" />
+                <Label Style="{StaticResource FieldCaption}" Text="net.bluefenix.postxing" />
+                <Label Style="{StaticResource FieldCaption}" Text="&#169; 2026 Blue Fenix Productions LLC" />
+                <Label Style="{StaticResource FieldCaption}" Text="Released under the MIT License." />
+
+                <BoxView Style="{StaticResource Hairline}" />
+
+                <!-- Links -->
+                <Label Style="{StaticResource Kicker}" Text="[ links ]"
+                       SemanticProperties.HeadingLevel="Level2" />
+                <FlexLayout Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+                    <Button Text="github" Clicked="OnLinkClicked"
+                            CommandParameter="https://github.com/BlueFenixProductions/PostXING"
+                            Style="{StaticResource ButtonGhost}" Margin="0,0,8,8"
+                            SemanticProperties.Description="Open the PostXING GitHub repository" />
+                    <Button Text="website" Clicked="OnLinkClicked"
+                            CommandParameter="https://bluefenixproductions.com"
+                            Style="{StaticResource ButtonGhost}" Margin="0,0,8,8"
+                            SemanticProperties.Description="Open bluefenixproductions.com" />
+                    <Button Text="report an issue" Clicked="OnLinkClicked"
+                            CommandParameter="https://github.com/BlueFenixProductions/PostXING/issues"
+                            Style="{StaticResource ButtonGhost}" Margin="0,0,8,8"
+                            SemanticProperties.Description="Report an issue on GitHub" />
+                    <Button Text="contact" Clicked="OnLinkClicked"
+                            CommandParameter="mailto:support@bluefenix.net"
+                            Style="{StaticResource ButtonGhost}" Margin="0,0,8,8"
+                            SemanticProperties.Description="Email support" />
+                </FlexLayout>
+
+                <BoxView Style="{StaticResource Hairline}" />
+
+                <!-- Credits -->
+                <Label Style="{StaticResource Kicker}" Text="[ built with ]"
+                       SemanticProperties.HeadingLevel="Level2" />
+                <Label Style="{StaticResource FieldCaption}"
+                       Text="&#183; .NET MAUI&#10;&#183; CommunityToolkit.Mvvm&#10;&#183; Markdig&#10;&#183; YamlDotNet&#10;&#183; Hack (typeface, MIT/OFL)&#10;&#183; GitHub CLI (gh)" />
+                <Label Style="{StaticResource FieldCaption}"
+                       Text="Thanks to the maintainers of these projects." />
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid Grid.Row="1" Padding="16,8" ColumnDefinitions="Auto,*">
+            <Button Grid.Column="0" Text="back" Clicked="OnBackClicked"
+                    Style="{StaticResource StatusBarButton}"
+                    SemanticProperties.Description="Back" />
+        </Grid>
+    </Grid>
+</ContentPage>

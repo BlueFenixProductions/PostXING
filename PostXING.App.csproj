@@ -44,6 +44,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- In-app imagery (e.g. the logo on the About page). postxing_logo.png is the same
+         art as the MauiIcon but carries a distinct resource name so it can be used as an
+         <Image Source="..."/>; reusing the MauiIcon's "appicon" name collides in resizetizer. -->
+    <MauiImage Include="Resources\Images\*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- HybridWebView assets. The MAUI SDK is supposed to auto-include Resources\Raw\**
          as MauiAsset but the convention isn't firing reliably for nested folders here,
          so we declare them explicitly. The HybridWebView resolves files from this set

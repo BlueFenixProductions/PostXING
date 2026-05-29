@@ -61,6 +61,7 @@ public partial class EditorPage : ContentPage
         // back to the home screen rather than pushing a second copy of it.
         vm.OpenPostRequested += async (_, _) => await Shell.Current.GoToAsync("..");
         vm.SettingsRequested += async (_, _) => await Shell.Current.GoToAsync("settings");
+        vm.AboutRequested += async (_, _) => await Shell.Current.GoToAsync("about");
         vm.PropertyChanged += OnViewModelPropertyChanged;
 
         EditorWebView.HandlerChanged += OnEditorWebViewHandlerChanged;

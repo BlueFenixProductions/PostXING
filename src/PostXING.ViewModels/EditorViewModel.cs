@@ -54,6 +54,7 @@ public sealed partial class EditorViewModel : ObservableObject
 
     public event EventHandler? OpenPostRequested;
     public event EventHandler? SettingsRequested;
+    public event EventHandler? AboutRequested;
     public event EventHandler? PublishConfirmationRequested;
 
     public EditorViewModel(
@@ -121,6 +122,9 @@ public sealed partial class EditorViewModel : ObservableObject
 
     [RelayCommand]
     private void Settings() => SettingsRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private void About() => AboutRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand(CanExecute = nameof(IsDirty))]
     private async Task SaveAsync()

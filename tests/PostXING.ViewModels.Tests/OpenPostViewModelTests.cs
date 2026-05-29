@@ -126,6 +126,19 @@ public sealed class OpenPostViewModelTests
     }
 
     [Fact]
+    public void About_button_navigates_only_once_per_visit()
+    {
+        var (vm, _, _, _) = CreateVm();
+        int aboutNav = 0;
+        vm.AboutRequested += (_, _) => aboutNav++;
+
+        vm.AboutCommand.Execute(null);
+        vm.AboutCommand.Execute(null);
+
+        aboutNav.ShouldBe(1, "about must be pushed exactly once per page visit");
+    }
+
+    [Fact]
     public async Task Re_appearing_on_the_page_re_arms_navigation()
     {
         var (vm, _, _, _) = CreateVm();
