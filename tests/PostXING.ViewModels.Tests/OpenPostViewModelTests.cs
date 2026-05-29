@@ -23,6 +23,16 @@ public sealed class OpenPostViewModelTests
         return (new OpenPostViewModel(gateway, settings, local), gateway, settings, local);
     }
 
+    // Hoisted to static fields so the sort assertions/setups below don't pass constant
+    // arrays as arguments (CA1861). Names describe the expected newest-first ordering.
+    private static readonly string[] LocalDraftsNewestFirst =
+        { "drafts/newest.md", "drafts/mid.md", "drafts/old.md" };
+    private static readonly string[] GitHubDraftFiles = { "drafts/wip.md" };
+    private static readonly string[] GitHubPostFiles =
+        { "posts/2026-01-05-old.md", "posts/2026-05-20-new.md" };
+    private static readonly string[] GitHubEntriesNewestFirst =
+        { "posts/2026-05-20-new.md", "posts/2026-01-05-old.md", "drafts/wip.md" };
+
     [Fact]
     public async Task Selecting_a_post_hands_it_off_and_navigates_exactly_once()
     {
@@ -103,8 +113,7 @@ public sealed class OpenPostViewModelTests
 
             await vm.RefreshAsync();
 
-            vm.Entries.Select(e => e.DisplayName).ShouldBe(
-                new[] { "drafts/newest.md", "drafts/mid.md", "drafts/old.md" });
+            vm.Entries.Select(e => e.DisplayName).ShouldBe(LocalDraftsNewestFirst);
         }
         finally { Directory.Delete(folder, recursive: true); }
     }
@@ -115,14 +124,13 @@ public sealed class OpenPostViewModelTests
         var (vm, gateway, settings, _) = CreateVm();
         settings.Current.Returns(AppSettings.Default with { Owner = "o", Repo = "r" });
         gateway.ListMarkdownFilesAsync("o", "r", "develop", "drafts/")
-            .Returns(new[] { "drafts/wip.md" });
+            .Returns(GitHubDraftFiles);
         gateway.ListMarkdownFilesAsync("o", "r", "develop", "posts/")
-            .Returns(new[] { "posts/2026-01-05-old.md", "posts/2026-05-20-new.md" });
+            .Returns(GitHubPostFiles);
 
         await vm.RefreshAsync();
 
-        vm.Entries.Select(e => e.DisplayName).ShouldBe(
-            new[] { "posts/2026-05-20-new.md", "posts/2026-01-05-old.md", "drafts/wip.md" });
+        vm.Entries.Select(e => e.DisplayName).ShouldBe(GitHubEntriesNewestFirst);
     }
 
     [Fact]

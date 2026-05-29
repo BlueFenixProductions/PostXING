@@ -6,7 +6,7 @@ namespace PostXING.Markdown.Tests;
 
 public sealed class YamlFrontMatterParserTests
 {
-    private readonly IFrontMatterParser _parser = new YamlFrontMatterParser();
+    private readonly YamlFrontMatterParser _parser = new();
 
     private const string Sample = """
         ---

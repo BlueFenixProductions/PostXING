@@ -439,7 +439,7 @@ public sealed class GitHubColorblindHighlighterTests
         // Both the open and the close are classed; the inner text stays unstyled markdown.
         result.ShouldContain("&lt;div");
         result.ShouldContain("&lt;/div");
-        var openCount = System.Text.RegularExpressions.Regex.Matches(result, "class=\"html\"").Count;
+        var openCount = System.Text.RegularExpressions.Regex.Count(result, "class=\"html\"");
         openCount.ShouldBeGreaterThanOrEqualTo(2);
     }
 
