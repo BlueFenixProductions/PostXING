@@ -25,7 +25,8 @@ for the two pending items lives in the plan at
 | Blue-screen fix (fast-deploy) | `efe1b90` | `android.ps1` uninstalls before deploy; device renders reliably |
 | CI Android build | (config on develop) | **CI green on develop** (real run: workloads + Android compile + tests, 6m6s) |
 | SAF foundation: `ILocalPostStore.CreateAsync` | `a49aed3` | path/URI construction moved into the store; 105 tests green, both heads compile |
-| **Native Android SAF storage** | `87a50cc` | `SafFolderPicker` (ACTION_OPEN_DOCUMENT_TREE + persistable grant) + `SafLocalPostStore` (DocumentsContract + ContentResolver) + Settings "pick folder..." button. Builds clean, 105/105 tests, deployed to Pixel 7 (operator-driven on-device verify pending). |
+| **Native Android SAF storage** | `87a50cc` | `SafFolderPicker` (ACTION_OPEN_DOCUMENT_TREE + persistable grant) + `SafLocalPostStore` (DocumentsContract + ContentResolver) + Settings "pick folder..." button. Verified on Pixel 7 with a Termux-managed folder (other tree-URIs untested). |
+| **Publish flow + GH draft-save + local git ops** | `d77d027` | EditorPage publish-confirm action sheet (Windows-only) -> `EditorViewModel.ConfirmPublishAsync` -> `GitHubPublishService.PublishAsync`; `GetFileShaAsync` real on the gateway + used by the service; SaveAsync GH branch writes back to the opened path via new `SaveToBranchAsync`; `IGitStatusService` gets `CommitAsync/PushAsync/PullAsync`; sync chip on both pages is now actionable (commit & push / commit / push / pull / refresh). 113/113 tests, both heads clean. |
 
 ## Pending work
 
@@ -42,28 +43,16 @@ the Android-only "pick folder..." button + URI caption (Windows keeps the typed 
 force-stop + reopen → draft must persist and reopen. Windows local-folder save must be
 unchanged. If verify uncovers an issue, file a follow-up.
 
-### D — git interaction (Windows-only; hidden on Android)
+### D — git interaction — **landed (d77d027)**
 
-The GitHub **backend is fully built + tested**; the gap is UI wiring + one stub. Operator wants all three:
+All three sub-items shipped Windows-only (Android hides the chip + Publish via
+`OnPlatform` / code-behind toolbar-item removal). See the "Done + merged" row for the
+commit and the test deltas.
 
-- **D1 Publish flow:** `EditorPage.xaml.cs` subscribe to `vm.PublishConfirmationRequested` (mirror the
-  `PreviewRequested` wiring) → confirm modal w/ auto-merge → new `EditorViewModel.ConfirmPublishAsync(autoMerge)`
-  builds `SiteConfig` (settings Owner/Repo/DevelopBranch) + `Post` (FrontMatter/Slug/body) and calls
-  `GitHubPublishService.PublishAsync(post, site, RawMarkdown, autoMerge)` (signature confirmed). Surface
-  `PublishState` in `SaveStatus`. **Inject `GitHubPublishService` into `EditorViewModel`** (6 deps → 7) and
-  update the `Ctor_takes_only_the_six_real_dependencies` locking test in `EditorViewModelTests`.
-- **D2 draft-save + open + GetFileShaAsync:** `EditorViewModel.SaveAsync` `PostSource.GitHub` branch →
-  `GitHubPublishService.SaveDraftAsync(post, site, RawMarkdown)` (currently a "use the gh terminal" stub).
-  Implement the sha: add `IGitHubGateway.GetFileShaAsync(owner, repo, branch, path)` (`gh api
-  repos/{o}/{r}/contents/{path}?ref={b} --jq .sha`) in `GhCliGitHubGateway` + `InMemoryGitHubGateway`, and
-  use it in `GitHubPublishService.GetFileShaAsync` (replace `return null`, lines ~77-81). Open-from-GitHub is
-  already wired in `OpenPostViewModel.SelectAsync` (fetches via `GetFileContentAsync`, `PostHandle.FromGitHubPath`).
-- **D3 local git:** extend `GitCliStatusService` (or a sibling) with `CommitAsync/PushAsync/PullAsync`,
-  reusing its `MakeProcessRunner` pattern (`git -C <folder> …`, `GIT_TERMINAL_PROMPT=0`). UI: make the sync
-  chip actionable (action sheet: commit-with-message / push / pull) on `EditorPage` + `OpenPostPage`; refresh
-  the chip after each.
-
-Gate all D behind `#if WINDOWS` / `OnPlatform` — no `gh`/`git` CLI on Android.
+**Open:** no formal Windows verify on develop yet — the publish path actually hits a
+live GitHub repo when invoked, so this needs an operator pass against a real repo
+(create a draft post, hit Publish → "open PR only", confirm PR appears, then merge by
+hand). The sync-chip action sheet can be exercised on the PostXING repo itself.
 
 ## Hard-won knowledge (don't relearn)
 
