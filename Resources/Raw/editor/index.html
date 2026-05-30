@@ -32,6 +32,8 @@
   --punctuation: #d2a8ff;
   --caret: #79c0ff;
   --selection: rgba(56, 139, 253, 0.30);
+  --bracket: #06B6D4;   /* [ ] square brackets - cyan (kicker SignalCyan) */
+  --brace: #ffa657;     /* { } curly braces - amber */
 }
 
 body.light {
@@ -48,6 +50,8 @@ body.light {
   --punctuation: #6e7781;
   --caret: #0550ae;
   --selection: rgba(84, 174, 255, 0.30);
+  --bracket: #0E7490;   /* [ ] square brackets - cyan (kicker SignalCyanDeep) */
+  --brace: #953800;     /* { } curly braces - amber */
 }
 
 html, body {
@@ -104,6 +108,8 @@ html, body {
 .md-bq { color: var(--string); font-style: italic; }
 .md-hr { color: var(--punctuation); }
 .md-html { color: var(--comment); }
+.md-bracket { color: var(--bracket); }
+.md-brace { color: var(--brace); }
 
 .html { color: var(--keyword); font-weight: 700; }
 .html-attr { color: var(--variable); }
@@ -239,6 +245,11 @@ html, body {
         }
       }
 
+      // Delimiters: square brackets blue, curly braces amber (literal, when not consumed
+      // by the link/image rules above).
+      if (c === '[' || c === ']') { out += '<span class="md-bracket">' + c + '</span>'; i++; continue; }
+      if (c === '{' || c === '}') { out += '<span class="md-brace">' + c + '</span>'; i++; continue; }
+
       out += escapeHtml(c);
       i++;
     }
@@ -373,7 +384,7 @@ html, body {
   function renderCssWithPunct(line) {
     let out = '';
     for (const ch of line) {
-      if (ch === '{' || ch === '}') out += '<span class="css-punct">' + ch + '</span>';
+      if (ch === '{' || ch === '}') out += '<span class="md-brace">' + ch + '</span>';
       else out += escapeHtml(ch);
     }
     return out;
@@ -426,7 +437,7 @@ html, body {
         const after = seg.slice(closeIdx + 1);
         if (before.trim() !== '') out += cssLine(before);
         else out += escapeHtml(before);
-        out += '<span class="css-punct">}</span>';
+        out += '<span class="md-brace">}</span>';
         if (after !== '') out += escapeHtml(after);
         if (i < parts.length - 1) out += '<span class="css-punct">;</span>';
         continue;
@@ -446,7 +457,7 @@ html, body {
     if (braceIdx >= 0) {
       const head = line.slice(0, braceIdx);
       const tail = line.slice(braceIdx + 1);
-      let out = renderCssSelector(head) + '<span class="css-punct">{</span>';
+      let out = renderCssSelector(head) + '<span class="md-brace">{</span>';
       if (tail !== '') out += renderCssDeclarations(tail);
       return out;
     }
@@ -564,6 +575,10 @@ html, body {
         }
         continue;
       }
+
+      // Delimiters: square brackets cyan, curly braces amber, even inside <script>.
+      if (c === '[' || c === ']') { out += '<span class="md-bracket">' + c + '</span>'; i++; continue; }
+      if (c === '{' || c === '}') { out += '<span class="md-brace">' + c + '</span>'; i++; continue; }
 
       out += escapeHtml(c);
       i++;

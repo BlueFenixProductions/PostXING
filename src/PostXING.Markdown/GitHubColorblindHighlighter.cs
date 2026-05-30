@@ -16,6 +16,7 @@ namespace PostXING.Markdown;
 ///   md-li list marker       md-code inline code  md-codeblock fenced code line
 ///   md-link-text [...]      md-link-url (...)  md-link-pct punctuation [ ] ( )
 ///   md-bq  blockquote line  md-hr horizontal rule
+///   md-bracket literal [ ]  md-brace literal { }
 ///   md-html html comment block
 ///   html  html tag (e.g. &lt;style&gt;, &lt;script&gt;, &lt;br/&gt;, &lt;VPTeamMembers/&gt;)
 ///   html-attr html attribute name    html-str html attribute value
@@ -257,7 +258,7 @@ public sealed class GitHubColorblindHighlighter : IMarkdownHighlighter
             var tail = line.Substring(braceIdx + 1);
             var sb = new StringBuilder();
             sb.Append(RenderCssSelector(head));
-            sb.Append("<span class=\"css-punct\">{</span>");
+            sb.Append("<span class=\"md-brace\">{</span>");
             if (tail.Length > 0)
             {
                 // Tail can be one or more declarations and possibly a closing brace.
@@ -329,7 +330,7 @@ public sealed class GitHubColorblindHighlighter : IMarkdownHighlighter
                 var after = seg.Substring(closeIdx + 1);
                 if (before.Trim().Length > 0) sb.Append(CssLine(before));
                 else sb.Append(Escape(before));
-                sb.Append("<span class=\"css-punct\">}</span>");
+                sb.Append("<span class=\"md-brace\">}</span>");
                 if (after.Length > 0) sb.Append(Escape(after));
                 if (i < parts.Length - 1) sb.Append("<span class=\"css-punct\">;</span>");
                 continue;
@@ -370,7 +371,7 @@ public sealed class GitHubColorblindHighlighter : IMarkdownHighlighter
         var sb = new StringBuilder();
         foreach (var ch in line)
         {
-            if (ch == '{' || ch == '}') sb.Append("<span class=\"css-punct\">").Append(ch).Append("</span>");
+            if (ch == '{' || ch == '}') sb.Append("<span class=\"md-brace\">").Append(ch).Append("</span>");
             else Escape(sb, ch);
         }
         return sb.ToString();
@@ -502,6 +503,10 @@ public sealed class GitHubColorblindHighlighter : IMarkdownHighlighter
                     sb.Append(Escape(word));
                 continue;
             }
+
+            // Delimiters: square brackets cyan, curly braces amber, even inside <script>.
+            if (c == '[' || c == ']') { sb.Append("<span class=\"md-bracket\">").Append(c).Append("</span>"); i++; continue; }
+            if (c == '{' || c == '}') { sb.Append("<span class=\"md-brace\">").Append(c).Append("</span>"); i++; continue; }
 
             Escape(sb, c);
             i++;
@@ -761,6 +766,11 @@ public sealed class GitHubColorblindHighlighter : IMarkdownHighlighter
                     }
                 }
             }
+
+            // Delimiters: square brackets blue, curly braces amber (literal, when not consumed
+            // by the link/image rules above).
+            if (c == '[' || c == ']') { sb.Append("<span class=\"md-bracket\">").Append(c).Append("</span>"); i++; continue; }
+            if (c == '{' || c == '}') { sb.Append("<span class=\"md-brace\">").Append(c).Append("</span>"); i++; continue; }
 
             sb.Append(Escape(c));
             i++;
