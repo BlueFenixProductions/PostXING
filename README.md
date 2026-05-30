@@ -3,6 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4.svg)](https://dotnet.microsoft.com/)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6.svg)](#requirements)
+[![Platform: Android](https://img.shields.io/badge/platform-Android-3DDC84.svg)](#requirements)
 
 A **Windows / Android .NET 10 MAUI** Markdown blog editor built around a **Markdown + GitHub + static-site-generator** workflow. PostXING 4.0 is a greenfield rewrite that carries the spirit of the original 2007 WinForms blog editor into a modern stack.
 
