@@ -49,7 +49,6 @@ public partial class EditorPage : ContentPage
     private readonly IPendingPostBox _box;
     private readonly IPreviewBox _previewBox;
 
-    private bool _editorReady;
     private string _lastSyncedText = string.Empty;
     private bool _suppressOutgoingPropertyChanged;
 
@@ -67,14 +66,28 @@ public partial class EditorPage : ContentPage
         vm.AboutRequested += async (_, _) => await Shell.Current.GoToAsync("about");
         vm.PreviewRequested += async (_, _) =>
         {
+#if ANDROID
+            // The JS->host bridge can't live-sync edits, so RawMarkdown is the last seeded text
+            // unless we pull. Without this, opening Preview after typing shows stale content.
+            await SyncEditorTextBeforeSaveAsync();
+#endif
             _previewBox.Put(_vm.RawMarkdown);
             await Shell.Current.GoToAsync("preview");
         };
         vm.PropertyChanged += OnViewModelPropertyChanged;
 
+#if WINDOWS
+        // GH publish is gh-CLI-only — only ever fired on Windows (the Publish toolbar item is
+        // removed below on Android, the bottom-bar Publish button is hidden via OnPlatform).
+        vm.PublishConfirmationRequested += OnPublishConfirmationRequestedAsync;
+#endif
+
 #if ANDROID
         // Android's JS->host bridge can't live-sync edits, so pull the editor text on save.
         vm.SyncBeforeSaveAsync = SyncEditorTextBeforeSaveAsync;
+        // Publish shells out to `gh`/`git`, neither present on Android — drop the toolbar entry.
+        var publishItem = ToolbarItems.FirstOrDefault(t => t.Text == "Publish");
+        if (publishItem is not null) ToolbarItems.Remove(publishItem);
 #endif
 
         // HybridWebView serves Resources/Raw/editor (HybridRoot) and exposes a raw
@@ -125,7 +138,6 @@ public partial class EditorPage : ContentPage
 
             if (type == "ready")
             {
-                _editorReady = true;
                 BridgeLog.Write($"ready received → pushing {_vm.RawMarkdown.Length} chars + theme");
                 await PushThemeAsync();
                 await PushTextAsync(_vm.RawMarkdown);
@@ -190,6 +202,64 @@ public partial class EditorPage : ContentPage
             catch (Exception ex) { BridgeLog.Write($"PushTheme threw {ex.GetType().Name}: {ex.Message}"); }
         });
         return Task.CompletedTask;
+    }
+
+#if WINDOWS
+    // Confirm-publish modal. Action sheet keeps to the project's minimum-chrome aesthetic and
+    // gives the user a clear "open PR only" vs "open PR + auto-merge on green CI" choice plus
+    // a cancel. After the choice, ConfirmPublishAsync runs the publish flow and surfaces
+    // PublishState via SaveStatus.
+    private async void OnPublishConfirmationRequestedAsync(object? sender, EventArgs e)
+    {
+        var title = string.IsNullOrWhiteSpace(_vm.FrontMatter.Title) ? "this post" : $"\"{_vm.FrontMatter.Title}\"";
+        const string openOnly = "open PR only";
+        const string autoMerge = "open PR + auto-merge on green CI";
+        var choice = await DisplayActionSheetAsync($"Publish {title}?", "cancel", null, openOnly, autoMerge);
+        if (string.IsNullOrEmpty(choice) || choice == "cancel") return;
+        await _vm.ConfirmPublishAsync(autoMerge: choice == autoMerge);
+    }
+#endif
+
+    // Sync chip action sheet — commit / push / pull / refresh. The chip is Windows-only
+    // (the bottom bar is hidden on Android via OnPlatform), so this never fires on Android
+    // even though the handler compiles for both heads.
+    private async void OnSyncChipTapped(object? sender, TappedEventArgs e)
+    {
+        const string commitPush = "commit & push";
+        const string commitOnly = "commit";
+        const string push = "push";
+        const string pull = "pull";
+        const string refresh = "refresh";
+        var choice = await DisplayActionSheetAsync("git", "cancel", null, commitPush, commitOnly, push, pull, refresh);
+        switch (choice)
+        {
+            case commitPush:
+            {
+                var msg = await PromptCommitMessageAsync();
+                if (msg is null) return;
+                await _vm.CommitAsync(msg);
+                await _vm.PushLocalAsync();
+                break;
+            }
+            case commitOnly:
+            {
+                var msg = await PromptCommitMessageAsync();
+                if (msg is null) return;
+                await _vm.CommitAsync(msg);
+                break;
+            }
+            case push: await _vm.PushLocalAsync(); break;
+            case pull: await _vm.PullLocalAsync(); break;
+            case refresh: await _vm.RefreshSyncAsync(fetch: true); break;
+        }
+    }
+
+    private async Task<string?> PromptCommitMessageAsync()
+    {
+        var msg = await DisplayPromptAsync("commit", "what changed?",
+            accept: "commit", cancel: "cancel",
+            initialValue: "WIP draft", maxLength: 240);
+        return string.IsNullOrWhiteSpace(msg) ? null : msg;
     }
 
 #if ANDROID

@@ -1,10 +1,13 @@
+using Microsoft.Maui.Storage;
 using PostXING.ViewModels;
 
 namespace PostXING.App.Services;
 
 /// <summary>
-/// Reads the github-markdown colorblind stylesheets bundled under Resources/Raw/preview/ (a MauiAsset,
-/// laid down next to the editor assets at AppContext.BaseDirectory/preview/). Cached after first read.
+/// Reads the github-markdown colorblind stylesheets bundled under Resources/Raw/preview/ (a MauiAsset).
+/// Uses <see cref="FileSystem.OpenAppPackageFileAsync"/> so the same call works on Windows (laid down
+/// at AppContext.BaseDirectory/preview/) and on Android (inside the APK, where raw File.ReadAllText
+/// would silently return empty and the preview body would render unreadably dark-on-dark). Cached.
 /// </summary>
 public sealed class PreviewStyles : IPreviewStyles
 {
@@ -20,8 +23,11 @@ public sealed class PreviewStyles : IPreviewStyles
     {
         try
         {
-            var path = Path.Combine(AppContext.BaseDirectory, "preview", file);
-            return File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+            // Forward-slash separator — MAUI normalizes MauiAsset logical names across platforms.
+            using var stream = FileSystem.OpenAppPackageFileAsync($"preview/{file}")
+                .GetAwaiter().GetResult();
+            using var reader = new StreamReader(stream);
+            return reader.ReadToEnd();
         }
         catch { return string.Empty; }
     }

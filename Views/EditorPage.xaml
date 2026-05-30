@@ -129,9 +129,9 @@
                            TextColor="{AppThemeBinding Light={StaticResource ForgeAmberDeep}, Dark={StaticResource ForgeAmber}}" />
                     <HorizontalStackLayout Spacing="4" VerticalOptions="Center"
                                            ToolTipProperties.Text="{Binding SyncDetail}"
-                                           SemanticProperties.Description="Git sync status; tap to refresh">
+                                           SemanticProperties.Description="Git sync status; tap for commit/push/pull">
                         <HorizontalStackLayout.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding RefreshSyncCommand}" />
+                            <TapGestureRecognizer Tapped="OnSyncChipTapped" />
                         </HorizontalStackLayout.GestureRecognizers>
                         <shapes:Path Aspect="Uniform" HeightRequest="18" WidthRequest="18" VerticalOptions="Center"
                                      Fill="{Binding SyncState, Converter={StaticResource SyncBrush}}"

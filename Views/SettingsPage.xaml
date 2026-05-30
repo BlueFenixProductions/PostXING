@@ -15,28 +15,47 @@
 
             <Label Style="{StaticResource Kicker}" Text="[ local posts folder ]"
                    SemanticProperties.HeadingLevel="Level2" />
+            <!-- Windows: typed path. Hidden on Android because typing a content:// SAF URI is
+                 not a user-facing affordance — the Pick folder button below does it instead. -->
             <Entry Placeholder="C:\path\to\your\posts" Text="{Binding LocalFolder}"
+                   IsVisible="{OnPlatform Default=True, Android=False}"
                    SemanticProperties.Description="Local posts folder" />
+            <!-- Android-only: SAF Open Document Tree returns a persisted content:// URI. The
+                 picked URI is shown read-only beneath the button so the user can see a folder
+                 is bound; the value lives in LocalFolder either way. -->
+            <Button Text="pick folder..." Command="{Binding PickFolderCommand}"
+                    Style="{StaticResource ButtonGhost}"
+                    IsVisible="{OnPlatform Default=False, Android=True}"
+                    HorizontalOptions="Start"
+                    SemanticProperties.Description="Pick a local posts folder" />
+            <Label Style="{StaticResource FieldCaption}" Text="{Binding LocalFolder}"
+                   IsVisible="{OnPlatform Default=False, Android=True}"
+                   FontFamily="HackRegular"
+                   SemanticProperties.Description="Currently selected local posts folder" />
             <Label Style="{StaticResource FieldCaption}"
                    Text="Where you keep your .md files locally. Use your own git client to commit and push." />
 
-            <BoxView Style="{StaticResource Hairline}" />
+            <!-- GitHub repo / integration-branch config is gh-CLI/desktop-only; there is no gh on
+                 Android, so this section is hidden there (the local-folder workflow stays). -->
+            <VerticalStackLayout Spacing="16" IsVisible="{OnPlatform Default=True, Android=False}">
+                <BoxView Style="{StaticResource Hairline}" />
 
-            <Label Style="{StaticResource Kicker}" Text="[ github repository (optional) ]"
-                   SemanticProperties.HeadingLevel="Level2" />
-            <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
-                <Entry Grid.Column="0" Placeholder="owner" Text="{Binding Owner}"
-                       SemanticProperties.Description="GitHub repository owner" />
-                <Label Grid.Column="1" Text="/" VerticalOptions="Center"
-                       FontFamily="HackRegular"
-                       TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
-                <Entry Grid.Column="2" Placeholder="repo" Text="{Binding Repo}"
-                       SemanticProperties.Description="GitHub repository name" />
-            </Grid>
-            <Label Style="{StaticResource Kicker}" Text="[ integration branch ]"
-                   SemanticProperties.HeadingLevel="Level2" />
-            <Entry Placeholder="develop" Text="{Binding DevelopBranch}"
-                   SemanticProperties.Description="GitHub integration branch" />
+                <Label Style="{StaticResource Kicker}" Text="[ github repository (optional) ]"
+                       SemanticProperties.HeadingLevel="Level2" />
+                <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
+                    <Entry Grid.Column="0" Placeholder="owner" Text="{Binding Owner}"
+                           SemanticProperties.Description="GitHub repository owner" />
+                    <Label Grid.Column="1" Text="/" VerticalOptions="Center"
+                           FontFamily="HackRegular"
+                           TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
+                    <Entry Grid.Column="2" Placeholder="repo" Text="{Binding Repo}"
+                           SemanticProperties.Description="GitHub repository name" />
+                </Grid>
+                <Label Style="{StaticResource Kicker}" Text="[ integration branch ]"
+                       SemanticProperties.HeadingLevel="Level2" />
+                <Entry Placeholder="develop" Text="{Binding DevelopBranch}"
+                       SemanticProperties.Description="GitHub integration branch" />
+            </VerticalStackLayout>
 
             <BoxView Style="{StaticResource Hairline}" />
 
@@ -45,22 +64,25 @@
             <Entry Placeholder="Your name" Text="{Binding AuthorName}"
                    SemanticProperties.Description="Default author name for new posts" />
 
-            <BoxView Style="{StaticResource Hairline}" />
+            <!-- The gh CLI status + in-app terminal don't exist on Android (no gh binary); hidden there. -->
+            <VerticalStackLayout Spacing="16" IsVisible="{OnPlatform Default=True, Android=False}">
+                <BoxView Style="{StaticResource Hairline}" />
 
-            <Label Style="{StaticResource Kicker}" Text="[ github cli ]"
-                   SemanticProperties.HeadingLevel="Level2" />
-            <Label Style="{StaticResource FieldCaption}" Text="{Binding GhAuthDetail}" FontFamily="HackRegular"
-                   SemanticProperties.Description="gh authentication status detail" />
-            <HorizontalStackLayout Spacing="8">
-                <Button Text="open gh terminal" Command="{Binding OpenTerminalCommand}"
-                        Style="{StaticResource ButtonGhost}"
-                        SemanticProperties.Description="Open gh terminal" />
-                <Button Text="re-check status" Command="{Binding CheckAuthCommand}"
-                        Style="{StaticResource ButtonGhost}"
-                        SemanticProperties.Description="Re-check gh authentication status" />
-            </HorizontalStackLayout>
-            <Label Style="{StaticResource FieldCaption}"
-                   Text="The gh terminal lets you run gh CLI commands without leaving the app. You don't need gh installed if you only use the local folder workflow above." />
+                <Label Style="{StaticResource Kicker}" Text="[ github cli ]"
+                       SemanticProperties.HeadingLevel="Level2" />
+                <Label Style="{StaticResource FieldCaption}" Text="{Binding GhAuthDetail}" FontFamily="HackRegular"
+                       SemanticProperties.Description="gh authentication status detail" />
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="open gh terminal" Command="{Binding OpenTerminalCommand}"
+                            Style="{StaticResource ButtonGhost}"
+                            SemanticProperties.Description="Open gh terminal" />
+                    <Button Text="re-check status" Command="{Binding CheckAuthCommand}"
+                            Style="{StaticResource ButtonGhost}"
+                            SemanticProperties.Description="Re-check gh authentication status" />
+                </HorizontalStackLayout>
+                <Label Style="{StaticResource FieldCaption}"
+                       Text="The gh terminal lets you run gh CLI commands without leaving the app. You don't need gh installed if you only use the local folder workflow above." />
+            </VerticalStackLayout>
 
             <BoxView Style="{StaticResource Hairline}" />
 

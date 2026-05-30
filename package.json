@@ -2,10 +2,11 @@
   "name": "postxing",
   "version": "4.0.0",
   "private": true,
-  "description": "PostXING 4.0 - Windows-first .NET 10 MAUI Markdown blog editor",
+  "description": "PostXING 4.0 - Windows-first (+ Android) .NET 10 MAUI Markdown blog editor",
   "scripts": {
     "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1",
     "dev:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Build",
+    "android": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android.ps1",
     "bump": "node version.mjs",
     "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1",
     "xunit": "dotnet test solution/PostXING4.slnx -c Release"

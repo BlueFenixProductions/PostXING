@@ -47,6 +47,79 @@ public sealed class GitCliStatusService : IGitStatusService
         }
     }
 
+    public async Task<GitOperationResult> CommitAsync(string? folder, string message, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+            return new GitOperationResult(false, "no folder set");
+        if (string.IsNullOrWhiteSpace(message))
+            return new GitOperationResult(false, "commit message required");
+
+        try
+        {
+            var addRes = await _run(["-C", folder, "add", "-A"], ct);
+            if (addRes.exit != 0)
+                return new GitOperationResult(false, $"add failed: {Trim(addRes.stderr, addRes.stdout)}");
+
+            var commitRes = await _run(["-C", folder, "commit", "-m", message], ct);
+            if (commitRes.exit == 0)
+                return new GitOperationResult(true, "committed");
+
+            // `git commit` exits non-zero on "nothing to commit" — treat that as benign success.
+            var combined = (commitRes.stdout + "\n" + commitRes.stderr);
+            if (combined.Contains("nothing to commit", StringComparison.OrdinalIgnoreCase))
+                return new GitOperationResult(true, "nothing to commit");
+            return new GitOperationResult(false, $"commit failed: {Trim(commitRes.stderr, commitRes.stdout)}");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return new GitOperationResult(false, "git not found");
+        }
+    }
+
+    public async Task<GitOperationResult> PushAsync(string? folder, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+            return new GitOperationResult(false, "no folder set");
+        try
+        {
+            var res = await _run(["-C", folder, "push"], ct);
+            return res.exit == 0
+                ? new GitOperationResult(true, "pushed")
+                : new GitOperationResult(false, $"push failed: {Trim(res.stderr, res.stdout)}");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return new GitOperationResult(false, "git not found");
+        }
+    }
+
+    public async Task<GitOperationResult> PullAsync(string? folder, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+            return new GitOperationResult(false, "no folder set");
+        try
+        {
+            // --ff-only refuses to silently merge a diverged history; the user is asked to
+            // resolve that in their git client (we don't drive interactive rebases from here).
+            var res = await _run(["-C", folder, "pull", "--ff-only"], ct);
+            return res.exit == 0
+                ? new GitOperationResult(true, "pulled")
+                : new GitOperationResult(false, $"pull failed: {Trim(res.stderr, res.stdout)}");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return new GitOperationResult(false, "git not found");
+        }
+    }
+
+    // git outputs to stderr or stdout depending on the command + git version; pick the non-empty
+    // one (preferring stderr) and collapse whitespace runs to keep the status-line summary tidy.
+    private static string Trim(string stderr, string stdout)
+    {
+        var s = (string.IsNullOrWhiteSpace(stderr) ? stdout : stderr).Trim();
+        return s.Length == 0 ? "(no output)" : s.Replace("\r", "").Replace('\n', ' ');
+    }
+
     private static int CountNonBlankLines(string s) =>
         s.Split('\n').Count(l => !string.IsNullOrWhiteSpace(l));
 

@@ -22,11 +22,12 @@ public sealed class EditorViewModelTests
     /// <summary>
     /// Locks the EditorViewModel ctor signature. PreviewHtml + IMarkdownRenderer were deleted
     /// in the "no dead Markdig render on every keystroke" optimization pass; IGitStatusService was
-    /// added for the git sync chip. This test exists so changing the dependency set requires a
-    /// deliberate code change accompanied by an updated test.
+    /// added for the git sync chip; GitHubPublishService was added so Save (GH branch) and
+    /// Publish-confirm both route through the service layer. This test exists so changing the
+    /// dependency set requires a deliberate code change accompanied by an updated test.
     /// </summary>
     [Fact]
-    public void Ctor_takes_only_the_six_real_dependencies()
+    public void Ctor_takes_only_the_seven_real_dependencies()
     {
         var parser = Substitute.For<IFrontMatterParser>();
         parser.Parse(Arg.Any<string>()).Returns(new ParsedDocument(FrontMatter.Default, string.Empty));
@@ -37,8 +38,9 @@ public sealed class EditorViewModelTests
         var local = Substitute.For<ILocalPostStore>();
         var clock = TimeProvider.System;
         var gitStatus = StubGit();
+        var publish = new GitHubPublishService(gateway);
 
-        var vm = new EditorViewModel(parser, gateway, settings, local, clock, gitStatus);
+        var vm = new EditorViewModel(parser, gateway, settings, local, clock, gitStatus, publish);
 
         vm.ShouldNotBeNull();
         vm.ShowTitlePrompt.ShouldBeTrue("New EditorViewModel begins with the title-prompt overlay open.");
@@ -61,7 +63,7 @@ public sealed class EditorViewModelTests
         git.GetStatusAsync(Arg.Any<string?>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(new RepoSyncStatus(RepoSyncState.NeedsPull, 0, 2, 0, "2 commit(s) to pull from the remote."));
 
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, git);
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, git, new GitHubPublishService(gateway));
         await vm.RefreshSyncAsync(fetch: true);
 
         vm.SyncState.ShouldBe(RepoSyncState.NeedsPull);
@@ -79,7 +81,7 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit(), new GitHubPublishService(gateway));
         vm.CancelTitlePromptCommand.Execute(null);
         vm.IsDirty = false;
 
@@ -100,7 +102,7 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit(), new GitHubPublishService(gateway));
 
         vm.LoadPost(PostHandle.FromLocalPath(@"C:\posts\drafts\hello.md"), "# Hello\n");
 
@@ -126,7 +128,7 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit(), new GitHubPublishService(gateway));
 
         var raised = new List<string?>();
         vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
@@ -153,7 +155,7 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit(), new GitHubPublishService(gateway));
 
         vm.LoadPost(PostHandle.FromLocalPath(@"C:\posts\post.md"), "original");
         vm.IsDirty.ShouldBeFalse();
@@ -175,14 +177,14 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit(), new GitHubPublishService(gateway));
         vm.CancelTitlePromptCommand.Execute(null);
         vm.RawMarkdown = "some content";
 
         await vm.SaveCommand.ExecuteAsync(null);
 
         vm.SaveStatus.ShouldContain("local folder", Case.Insensitive);
-        await local.DidNotReceive().WriteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await local.DidNotReceive().CreateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     /// <summary>
@@ -203,7 +205,9 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default with { LocalFolder = @"C:\repo" });
         var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
+        local.CreateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(@"C:\repo\drafts\pulled-post.md");
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit(), new GitHubPublishService(gateway));
         vm.CancelTitlePromptCommand.Execute(null);
         vm.RawMarkdown = "typed-but-not-yet-synced";
 
@@ -218,7 +222,7 @@ public sealed class EditorViewModelTests
         await vm.SaveCommand.ExecuteAsync(null);
 
         hookRan.ShouldBeTrue("SaveAsync must await SyncBeforeSaveAsync before persisting.");
-        await local.Received(1).WriteAsync(
-            Arg.Any<string>(), "pulled-from-editor", Arg.Any<CancellationToken>());
+        await local.Received(1).CreateAsync(
+            @"C:\repo", "drafts/pulled-post.md", "pulled-from-editor", Arg.Any<CancellationToken>());
     }
 }

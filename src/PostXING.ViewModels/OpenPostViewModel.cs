@@ -62,6 +62,32 @@ public sealed partial class OpenPostViewModel : ObservableObject
     [RelayCommand]
     private Task RefreshSync() => RefreshSyncAsync(fetch: true);
 
+    public async Task CommitAsync(string message, CancellationToken ct = default)
+    {
+        var folder = _settings.Current.LocalFolder;
+        var result = await _gitStatus.CommitAsync(folder, message, ct);
+        StatusMessage = result.Success ? $"git: {result.Detail}" : $"git commit failed: {result.Detail}";
+        await RefreshSyncAsync(fetch: false);
+    }
+
+    public async Task PushLocalAsync(CancellationToken ct = default)
+    {
+        var folder = _settings.Current.LocalFolder;
+        var result = await _gitStatus.PushAsync(folder, ct);
+        StatusMessage = result.Success ? $"git: {result.Detail}" : $"git push failed: {result.Detail}";
+        await RefreshSyncAsync(fetch: true);
+    }
+
+    public async Task PullLocalAsync(CancellationToken ct = default)
+    {
+        var folder = _settings.Current.LocalFolder;
+        var result = await _gitStatus.PullAsync(folder, ct);
+        StatusMessage = result.Success ? $"git: {result.Detail}" : $"git pull failed: {result.Detail}";
+        // A successful pull may have brought new posts in — re-list as well as re-chip.
+        if (result.Success) await RefreshAsync();
+        else await RefreshSyncAsync(fetch: true);
+    }
+
     [RelayCommand]
     public async Task RefreshAsync()
     {
@@ -82,7 +108,7 @@ public sealed partial class OpenPostViewModel : ObservableObject
             {
                 var files = _local.List(s.LocalFolder!);
                 foreach (var f in files)
-                    found.Add((f.LastWriteTimeUtc, new PostEntry(PostSource.LocalFile, f.FullPath, f.RelativePath, "local")));
+                    found.Add((f.LastWriteTimeUtc, new PostEntry(PostSource.LocalFile, f.Id, f.RelativePath, "local")));
                 sources.Add($"{files.Count} local");
             }
             if (s.IsGitHubConfigured)

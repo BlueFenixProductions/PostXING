@@ -35,7 +35,13 @@ public static class MauiProgram
         builder.Services.AddSingleton<GitHubPublishService>();
         builder.Services.AddSingleton(TimeProvider.System);
 
+#if ANDROID
+        builder.Services.AddSingleton<ILocalPostStore, PostXING.App.Platforms.Android.SafLocalPostStore>();
+        builder.Services.AddSingleton<IFolderPicker, PostXING.App.Platforms.Android.SafFolderPicker>();
+#else
         builder.Services.AddSingleton<ILocalPostStore, FileSystemLocalPostStore>();
+        builder.Services.AddSingleton<IFolderPicker, NoOpFolderPicker>();
+#endif
         builder.Services.AddSingleton<ISettingsStore>(_ =>
         {
             var store = new FileSystemSettingsStore();
