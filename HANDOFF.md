@@ -25,36 +25,22 @@ for the two pending items lives in the plan at
 | Blue-screen fix (fast-deploy) | `efe1b90` | `android.ps1` uninstalls before deploy; device renders reliably |
 | CI Android build | (config on develop) | **CI green on develop** (real run: workloads + Android compile + tests, 6m6s) |
 | SAF foundation: `ILocalPostStore.CreateAsync` | `a49aed3` | path/URI construction moved into the store; 105 tests green, both heads compile |
+| **Native Android SAF storage** | `87a50cc` | `SafFolderPicker` (ACTION_OPEN_DOCUMENT_TREE + persistable grant) + `SafLocalPostStore` (DocumentsContract + ContentResolver) + Settings "pick folder..." button. Builds clean, 105/105 tests, deployed to Pixel 7 (operator-driven on-device verify pending). |
 
 ## Pending work
 
-### A — native Android SAF (the deferred big one)
+### A — native Android SAF — **landed (87a50cc)**
 
-Foundation is in place: `ILocalPostStore` now has `CreateAsync(folder, relativePath, contents) -> opaque id`,
-and `LocalPostFile.Id` is opaque (filesystem path on desktop, SAF document URI on Android). The desktop
-`Services/FileSystemLocalPostStore.cs` implements all four methods. `EditorViewModel.SaveAsync` (New
-branch) calls `CreateAsync` — no more `Path.Combine` that would mangle a `content://` URI.
+Shipped: `IFolderPicker`, `SafFolderPicker` (ACTION_OPEN_DOCUMENT_TREE + persistable Read|Write
+grant routed through `MainActivity.OnActivityResult`), `SafLocalPostStore` (DocumentsContract +
+ContentResolver, no `DocumentFile` package), DI branching in `MauiProgram.cs`, Settings UI with
+the Android-only "pick folder..." button + URI caption (Windows keeps the typed Entry via
+`OnPlatform`), and `AppSettings.IsLocalConfigured` relaxed from `Directory.Exists` to non-empty
+(SAF URIs don't satisfy `Directory.Exists`).
 
-To finish (operator chose **native SAF, no new package**):
-1. **`IFolderPicker`** (in `PostXING.ViewModels`): `Task<string?> PickFolderAsync()` → folder id
-   (path on Windows, persisted tree-URI string on Android, null on cancel).
-2. **Android picker** (`Platforms/Android`): `Intent(Intent.ActionOpenDocumentTree)` via
-   `StartActivityForResult` + a `TaskCompletionSource` wired through `MainActivity.OnActivityResult`
-   (or AndroidX `RegisterForActivityResult`); then **`ContentResolver.TakePersistableUriPermission(uri, Read|Write)`**
-   so the grant survives restarts. Return `uri.ToString()`.
-3. **`SafLocalPostStore : ILocalPostStore`** (`#if ANDROID`): use `Android.Provider.DocumentsContract`
-   + `ContentResolver` (NOT `DocumentFile` — that needs the `Xamarin.AndroidX.DocumentFile` package):
-   - `List(treeUri)`: query children under `drafts/`/`posts/` via `DocumentsContract.BuildChildDocumentsUriUsingTree`; return doc URIs as `Id`.
-   - `ReadAsync(docUri)`: `ContentResolver.OpenInputStream`.
-   - `WriteAsync(docUri)`: `ContentResolver.OpenOutputStream(uri, "wt")`.
-   - `CreateAsync(treeUri, "drafts/x.md", ...)`: find/create the subfolder dir doc, `DocumentsContract.CreateDocument("text/markdown", "x.md")`, write, return the new doc URI.
-   - **Verify these DocumentsContract signatures against the installed .NET-Android binding — don't fabricate.**
-4. **DI** (`MauiProgram.cs`): `#if ANDROID` → `SafLocalPostStore` + Android `IFolderPicker`; else the desktop store (+ a Windows picker, or keep the typed Entry).
-5. **Settings UI** (`Views/SettingsPage.xaml`): Android "Pick folder" button → `SettingsViewModel.PickFolderCommand`
-   (calls `IFolderPicker`, stores into `LocalFolder`); keep the typed Entry on Windows via `OnPlatform`.
-6. **Verify on device:** pick folder (grant SAF) → New post → type → Save → reopen the app → draft persists and reopens. Windows local-folder save unchanged.
-
-`OpenPostViewModel.RefreshAsync`/`SelectAsync` already pass the opaque `Id` through, so they need no change once `List` returns document URIs.
+**Open: operator-driven on-device verify.** Pick folder (grant SAF) → New post → type → Save →
+force-stop + reopen → draft must persist and reopen. Windows local-folder save must be
+unchanged. If verify uncovers an issue, file a follow-up.
 
 ### D — git interaction (Windows-only; hidden on Android)
 
