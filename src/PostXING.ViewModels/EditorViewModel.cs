@@ -140,9 +140,6 @@ public sealed partial class EditorViewModel : ObservableObject
         await RefreshSyncAsync(fetch: true);
     }
 
-    [RelayCommand]
-    private Task RefreshSync() => RefreshSyncAsync(fetch: true);
-
     public async Task RefreshAuthAsync()
     {
         try

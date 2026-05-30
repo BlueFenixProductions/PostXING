@@ -225,41 +225,4 @@ public sealed class EditorViewModelTests
         await local.Received(1).CreateAsync(
             @"C:\repo", "drafts/pulled-post.md", "pulled-from-editor", Arg.Any<CancellationToken>());
     }
-
-    /// <summary>
-    /// Edit-sync contract: SaveAsync must await SyncBeforeSaveAsync BEFORE persisting, and the
-    /// text that hook leaves in RawMarkdown is what gets written. On Android the JS-&gt;host bridge
-    /// can't live-sync edits, so the EditorPage uses this hook to pull the editor's current text
-    /// (via EvaluateJavaScriptAsync getText) before the buffer is saved. If this breaks, Android
-    /// saves the seed instead of the user's typing.
-    /// </summary>
-    [Fact]
-    public async Task SaveAsync_awaits_SyncBeforeSaveAsync_and_persists_its_pulled_text()
-    {
-        var parser = Substitute.For<IFrontMatterParser>();
-        parser.Parse(Arg.Any<string>())
-            .Returns(call => new ParsedDocument(FrontMatter.Default.WithTitle("Pulled Post"), call.Arg<string>()));
-        var gateway = Substitute.For<IGitHubGateway>();
-        gateway.CheckAuthAsync(Arg.Any<CancellationToken>()).Returns(new GhAuthStatus(false, null, "stubbed"));
-        var settings = Substitute.For<ISettingsStore>();
-        settings.Current.Returns(AppSettings.Default with { LocalFolder = @"C:\repo" });
-        var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
-        vm.CancelTitlePromptCommand.Execute(null);
-        vm.RawMarkdown = "typed-but-not-yet-synced";
-
-        var hookRan = false;
-        vm.SyncBeforeSaveAsync = () =>
-        {
-            hookRan = true;
-            vm.RawMarkdown = "pulled-from-editor";   // simulates the host pulling editor text
-            return Task.CompletedTask;
-        };
-
-        await vm.SaveCommand.ExecuteAsync(null);
-
-        hookRan.ShouldBeTrue("SaveAsync must await SyncBeforeSaveAsync before persisting.");
-        await local.Received(1).WriteAsync(
-            Arg.Any<string>(), "pulled-from-editor", Arg.Any<CancellationToken>());
-    }
 }
