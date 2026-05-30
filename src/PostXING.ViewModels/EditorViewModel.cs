@@ -193,12 +193,13 @@ public sealed partial class EditorViewModel : ObservableObject
                         return;
                     }
                     var slug = Slug.From(string.IsNullOrWhiteSpace(FrontMatter.Title) ? "untitled" : FrontMatter.Title);
-                    var fullPath = Path.Combine(folder, "drafts", $"{slug.Value}.md");
-                    await _local.WriteAsync(fullPath, RawMarkdown);
-                    _handle = PostHandle.FromLocalPath(fullPath);
+                    // The store builds the path/URI (desktop: under the folder; Android SAF: under
+                    // the document tree) and returns the opaque id we re-save against thereafter.
+                    var id = await _local.CreateAsync(folder, $"drafts/{slug.Value}.md", RawMarkdown);
+                    _handle = PostHandle.FromLocalPath(id);
                     CurrentPath = _handle.DisplayName;
                     IsDirty = false;
-                    SaveStatus = $"Saved draft as {Path.GetFileName(fullPath)}";
+                    SaveStatus = $"Saved draft as {slug.Value}.md";
                     break;
 
                 case PostSource.GitHub:

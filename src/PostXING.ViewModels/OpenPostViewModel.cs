@@ -82,7 +82,7 @@ public sealed partial class OpenPostViewModel : ObservableObject
             {
                 var files = _local.List(s.LocalFolder!);
                 foreach (var f in files)
-                    found.Add((f.LastWriteTimeUtc, new PostEntry(PostSource.LocalFile, f.FullPath, f.RelativePath, "local")));
+                    found.Add((f.LastWriteTimeUtc, new PostEntry(PostSource.LocalFile, f.Id, f.RelativePath, "local")));
                 sources.Add($"{files.Count} local");
             }
             if (s.IsGitHubConfigured)

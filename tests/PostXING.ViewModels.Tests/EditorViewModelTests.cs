@@ -182,7 +182,7 @@ public sealed class EditorViewModelTests
         await vm.SaveCommand.ExecuteAsync(null);
 
         vm.SaveStatus.ShouldContain("local folder", Case.Insensitive);
-        await local.DidNotReceive().WriteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await local.DidNotReceive().CreateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     /// <summary>
@@ -203,6 +203,8 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default with { LocalFolder = @"C:\repo" });
         var local = Substitute.For<ILocalPostStore>();
+        local.CreateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(@"C:\repo\drafts\pulled-post.md");
         var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
         vm.CancelTitlePromptCommand.Execute(null);
         vm.RawMarkdown = "typed-but-not-yet-synced";
@@ -218,7 +220,7 @@ public sealed class EditorViewModelTests
         await vm.SaveCommand.ExecuteAsync(null);
 
         hookRan.ShouldBeTrue("SaveAsync must await SyncBeforeSaveAsync before persisting.");
-        await local.Received(1).WriteAsync(
-            Arg.Any<string>(), "pulled-from-editor", Arg.Any<CancellationToken>());
+        await local.Received(1).CreateAsync(
+            @"C:\repo", "drafts/pulled-post.md", "pulled-from-editor", Arg.Any<CancellationToken>());
     }
 }

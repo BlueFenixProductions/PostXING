@@ -28,4 +28,13 @@ public sealed class FileSystemLocalPostStore : ILocalPostStore
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
         await File.WriteAllTextAsync(fullPath, contents, ct);
     }
+
+    public async Task<string> CreateAsync(string folder, string relativePath, string contents, CancellationToken ct = default)
+    {
+        var fullPath = Path.Combine(folder, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        var dir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+        await File.WriteAllTextAsync(fullPath, contents, ct);
+        return fullPath;
+    }
 }
