@@ -15,9 +15,14 @@ public sealed class FileSystemSettingsStore : ISettingsStore
 
     public FileSystemSettingsStore()
     {
+#if ANDROID
+        // Android scoped storage: settings live in the app-private data dir.
+        var dir = Microsoft.Maui.Storage.FileSystem.AppDataDirectory;
+#else
         var dir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "PostXING");
+#endif
         Directory.CreateDirectory(dir);
         _path = Path.Combine(dir, "settings.json");
     }

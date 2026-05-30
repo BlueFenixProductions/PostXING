@@ -66,6 +66,10 @@ public static class MauiProgram
 
     private static void RefreshProcessPathFromRegistry()
     {
+        // Windows-registry PATH refresh for the gh/git shell-out path. No-op elsewhere:
+        // Android has no machine/user PATH registry and no CLI to find.
+        if (!OperatingSystem.IsWindows()) return;
+
         var machinePath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? string.Empty;
         var userPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? string.Empty;
         var merged = string.IsNullOrEmpty(userPath) ? machinePath : $"{machinePath};{userPath}";
