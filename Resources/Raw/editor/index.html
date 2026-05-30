@@ -71,7 +71,10 @@ html, body {
   caret-color: var(--caret);
   padding: 8px 12px;
   box-sizing: border-box;
-  height: 100vh;
+  /* 100% inherits the Android-resized body height (with AdjustResize the body shrinks
+     when the soft keyboard shows). 100vh on legacy Android WebViews ignored the IME, so
+     content fell behind the keyboard. */
+  height: 100%;
   overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-word;
@@ -132,7 +135,10 @@ html, body {
 </style>
 </head>
 <body>
-<div id="editor" contenteditable="true" spellcheck="false" autocorrect="off" autocapitalize="off"></div>
+<!-- plaintext-only: the IME inserts plain '\n' on Enter (no div/br wrapping), and the
+     contenteditable doesn't accept rich-paste DOM that would confuse the highlighter.
+     We still set innerHTML ourselves from highlight() to apply syntax colors. -->
+<div id="editor" contenteditable="plaintext-only" spellcheck="false" autocorrect="off" autocapitalize="off"></div>
 
 <script>
 (function () {
@@ -743,6 +749,31 @@ html, body {
     setCaretOffset(editor, offset);
   }
 
+  // Keep the caret visible inside the editor's own scrollable area. The Android WebView
+  // doesn't always scroll-into-view automatically after the IME inserts a newline, so the
+  // user can type "off the bottom" until they tap the chip. We compute the caret rect and
+  // nudge scrollTop only if it's outside the visible band.
+  function scrollCaretIntoView() {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0).cloneRange();
+    range.collapse(false);
+    const rects = range.getClientRects();
+    let rect = rects.length > 0 ? rects[rects.length - 1] : null;
+    if (!rect || (rect.top === 0 && rect.bottom === 0)) {
+      // Collapsed at the very end of an empty trailing line — scroll to the bottom.
+      editor.scrollTop = editor.scrollHeight;
+      return;
+    }
+    const editorRect = editor.getBoundingClientRect();
+    const margin = 24; // breathing room above/below the caret line
+    if (rect.bottom > editorRect.bottom - margin) {
+      editor.scrollTop += (rect.bottom - (editorRect.bottom - margin));
+    } else if (rect.top < editorRect.top + margin) {
+      editor.scrollTop -= ((editorRect.top + margin) - rect.top);
+    }
+  }
+
   // Push text to host. Debounced one rAF so we batch keystrokes.
   let outgoingScheduled = false;
   function postToHost(message) {
@@ -763,8 +794,30 @@ html, body {
     });
   }
 
-  editor.addEventListener('input', () => {
+  // IME composition state. On Android, voice dictation and predictive text run through
+  // the IME composition pipeline — fires compositionstart, then compositionupdate per
+  // chunk, then compositionend when committed. If we replace innerHTML mid-composition
+  // (via rehighlight), the composition is aborted and the user loses input. Also: Enter
+  // pressed during composition typically commits the composition without inserting the
+  // newline. So while composing we suppress rehighlight and let the IME deposit text
+  // freely; on compositionend we run one rehighlight to colorize the committed input.
+  let composing = false;
+  editor.addEventListener('compositionstart', () => { composing = true; });
+  editor.addEventListener('compositionend', () => {
+    composing = false;
     rehighlight();
+    scrollCaretIntoView();
+    scheduleOutgoing();
+  });
+
+  editor.addEventListener('input', (e) => {
+    if (composing || (e && e.isComposing)) {
+      // Still let the host pull the latest text on Save (it calls getText()) — only
+      // skip the visible highlight + post-message churn.
+      return;
+    }
+    rehighlight();
+    scrollCaretIntoView();
     scheduleOutgoing();
   });
 
