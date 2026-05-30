@@ -49,7 +49,6 @@ public partial class EditorPage : ContentPage
     private readonly IPendingPostBox _box;
     private readonly IPreviewBox _previewBox;
 
-    private bool _editorReady;
     private string _lastSyncedText = string.Empty;
     private bool _suppressOutgoingPropertyChanged;
 
@@ -125,7 +124,6 @@ public partial class EditorPage : ContentPage
 
             if (type == "ready")
             {
-                _editorReady = true;
                 BridgeLog.Write($"ready received → pushing {_vm.RawMarkdown.Length} chars + theme");
                 await PushThemeAsync();
                 await PushTextAsync(_vm.RawMarkdown);

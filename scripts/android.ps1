@@ -14,6 +14,17 @@
 # ASCII-only on purpose: Windows PowerShell 5.1 misdecodes BOM-less UTF-8.
 $ErrorActionPreference = 'Stop'
 
+# Uninstall any prior install first. EmbedAssembliesIntoApk avoids fast deploy for THIS build, but
+# installing over an app that previously used fast deploy can leave a stale .__override__ dir on
+# the device that still renders a blank colorPrimary screen. A clean uninstall clears it.
+$adb = @(
+    "$env:ANDROID_HOME\platform-tools\adb.exe",
+    "${env:ProgramFiles(x86)}\Android\android-sdk\platform-tools\adb.exe",
+    "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+if ($adb) { & $adb uninstall net.bluefenix.postxing 2>$null | Out-Null }
+else { Write-Host 'adb not found on standard paths; skipping pre-uninstall (deploy may show a blank screen if a stale install exists).' }
+
 node version.mjs
 if ($LASTEXITCODE -ne 0) { Write-Host 'version.mjs failed - not deploying.'; exit $LASTEXITCODE }
 
