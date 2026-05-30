@@ -20,7 +20,10 @@ public sealed class OpenPostViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        return (new OpenPostViewModel(gateway, settings, local), gateway, settings, local);
+        var git = Substitute.For<IGitStatusService>();
+        git.GetStatusAsync(Arg.Any<string?>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(new RepoSyncStatus(RepoSyncState.Unknown, 0, 0, 0, "stub"));
+        return (new OpenPostViewModel(gateway, settings, local, git), gateway, settings, local);
     }
 
     // Hoisted to static fields so the sort assertions/setups below don't pass constant

@@ -10,13 +10,23 @@ namespace PostXING.ViewModels.Tests;
 
 public sealed class EditorViewModelTests
 {
+    // Default git-status stub so constructing the VM (which kicks a sync refresh) is inert.
+    private static IGitStatusService StubGit(RepoSyncState state = RepoSyncState.Unknown)
+    {
+        var git = Substitute.For<IGitStatusService>();
+        git.GetStatusAsync(Arg.Any<string?>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(new RepoSyncStatus(state, 0, 0, 0, "stub"));
+        return git;
+    }
+
     /// <summary>
     /// Locks the EditorViewModel ctor signature. PreviewHtml + IMarkdownRenderer were deleted
-    /// in the "no dead Markdig render on every keystroke" optimization pass; this test exists so
-    /// re-adding either dependency requires a deliberate code change accompanied by an updated test.
+    /// in the "no dead Markdig render on every keystroke" optimization pass; IGitStatusService was
+    /// added for the git sync chip. This test exists so changing the dependency set requires a
+    /// deliberate code change accompanied by an updated test.
     /// </summary>
     [Fact]
-    public void Ctor_takes_only_the_five_real_dependencies()
+    public void Ctor_takes_only_the_six_real_dependencies()
     {
         var parser = Substitute.For<IFrontMatterParser>();
         parser.Parse(Arg.Any<string>()).Returns(new ParsedDocument(FrontMatter.Default, string.Empty));
@@ -26,14 +36,37 @@ public sealed class EditorViewModelTests
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
         var clock = TimeProvider.System;
+        var gitStatus = StubGit();
 
-        var vm = new EditorViewModel(parser, gateway, settings, local, clock);
+        var vm = new EditorViewModel(parser, gateway, settings, local, clock, gitStatus);
 
         vm.ShouldNotBeNull();
         vm.ShowTitlePrompt.ShouldBeTrue("New EditorViewModel begins with the title-prompt overlay open.");
         vm.IsDirty.ShouldBeFalse();
         vm.CurrentPath.ShouldBe("(new)");
         vm.RawMarkdown.ShouldBe(string.Empty);
+    }
+
+    [Fact]
+    public async Task RefreshSync_maps_the_service_result_to_the_chip()
+    {
+        var parser = Substitute.For<IFrontMatterParser>();
+        parser.Parse(Arg.Any<string>()).Returns(new ParsedDocument(FrontMatter.Default, string.Empty));
+        var gateway = Substitute.For<IGitHubGateway>();
+        gateway.CheckAuthAsync(Arg.Any<CancellationToken>()).Returns(new GhAuthStatus(false, null, "stub"));
+        var settings = Substitute.For<ISettingsStore>();
+        settings.Current.Returns(AppSettings.Default with { LocalFolder = @"C:\repo" });
+        var local = Substitute.For<ILocalPostStore>();
+        var git = Substitute.For<IGitStatusService>();
+        git.GetStatusAsync(Arg.Any<string?>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(new RepoSyncStatus(RepoSyncState.NeedsPull, 0, 2, 0, "2 commit(s) to pull from the remote."));
+
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, git);
+        await vm.RefreshSyncAsync(fetch: true);
+
+        vm.SyncState.ShouldBe(RepoSyncState.NeedsPull);
+        vm.SyncStatus.ShouldBe("needs pull (2)");
+        vm.SyncDetail.ShouldContain("pull");
     }
 
     [Fact]
@@ -46,7 +79,7 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System);
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
         vm.CancelTitlePromptCommand.Execute(null);
         vm.IsDirty = false;
 
@@ -67,7 +100,7 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System);
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
 
         vm.LoadPost(PostHandle.FromLocalPath(@"C:\posts\drafts\hello.md"), "# Hello\n");
 
@@ -93,7 +126,7 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System);
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
 
         var raised = new List<string?>();
         vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
@@ -120,7 +153,7 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System);
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
 
         vm.LoadPost(PostHandle.FromLocalPath(@"C:\posts\post.md"), "original");
         vm.IsDirty.ShouldBeFalse();
@@ -142,7 +175,7 @@ public sealed class EditorViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System);
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit());
         vm.CancelTitlePromptCommand.Execute(null);
         vm.RawMarkdown = "some content";
 

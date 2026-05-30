@@ -31,6 +31,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<IFrontMatterParser, YamlFrontMatterParser>();
         builder.Services.AddSingleton<IGitHubGateway, GhCliGitHubGateway>();
+        builder.Services.AddSingleton<IGitStatusService>(_ => new GitCliStatusService());
         builder.Services.AddSingleton<GitHubPublishService>();
         builder.Services.AddSingleton(TimeProvider.System);
 

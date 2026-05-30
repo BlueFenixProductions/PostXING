@@ -76,6 +76,7 @@ public partial class EditorPage : ContentPage
         var pending = _box.Take();
         if (pending is not null) _vm.LoadPost(pending.Handle, pending.Contents);
         _ = _vm.RefreshAuthAsync();
+        _ = _vm.RefreshSyncAsync(fetch: true);   // background git fetch + recompute the sync chip
         _ = PushTextAsync(_vm.RawMarkdown);
     }
 

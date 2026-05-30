@@ -13,6 +13,7 @@ public sealed partial class EditorViewModel : ObservableObject
     private readonly ISettingsStore _settings;
     private readonly ILocalPostStore _local;
     private readonly TimeProvider _clock;
+    private readonly IGitStatusService _gitStatus;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
@@ -36,6 +37,15 @@ public sealed partial class EditorViewModel : ObservableObject
 
     [ObservableProperty]
     private string _ghAuthStatus = "gh ?";
+
+    [ObservableProperty]
+    private RepoSyncState _syncState = RepoSyncState.Unknown;
+
+    [ObservableProperty]
+    private string _syncStatus = "sync ?";
+
+    [ObservableProperty]
+    private string _syncDetail = "Local repo sync vs the GitHub remote.";
 
     [ObservableProperty]
     private bool _showTitlePrompt;
@@ -62,17 +72,44 @@ public sealed partial class EditorViewModel : ObservableObject
         IGitHubGateway gateway,
         ISettingsStore settings,
         ILocalPostStore local,
-        TimeProvider clock)
+        TimeProvider clock,
+        IGitStatusService gitStatus)
     {
         _parser = parser;
         _gateway = gateway;
         _settings = settings;
         _local = local;
         _clock = clock;
+        _gitStatus = gitStatus;
 
         BeginNewPost();
         _ = RefreshAuthAsync();
+        _ = RefreshSyncAsync(fetch: false);   // instant local baseline; the page fetches on appear
     }
+
+    /// <summary>
+    /// Recomputes the git sync chip for the configured Local Posts Folder. <paramref name="fetch"/>
+    /// runs a background `git fetch` first so "needs pull" reflects the live remote.
+    /// </summary>
+    public async Task RefreshSyncAsync(bool fetch)
+    {
+        try
+        {
+            var status = await _gitStatus.GetStatusAsync(_settings.Current.LocalFolder, fetch);
+            SyncState = status.State;
+            SyncStatus = SyncChip.Label(status);
+            SyncDetail = string.IsNullOrEmpty(status.Detail) ? SyncStatus : status.Detail;
+        }
+        catch
+        {
+            SyncState = RepoSyncState.Unknown;
+            SyncStatus = "sync error";
+            SyncDetail = "Could not read git status.";
+        }
+    }
+
+    [RelayCommand]
+    private Task RefreshSync() => RefreshSyncAsync(fetch: true);
 
     public async Task RefreshAuthAsync()
     {
