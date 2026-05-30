@@ -6,10 +6,11 @@
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
              x:Class="PostXING.App.Views.EditorPage"
              x:DataType="vm:EditorViewModel"
+             Title="PostXING"
              BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
-             Shell.NavBarIsVisible="False">
+             Shell.NavBarIsVisible="{OnPlatform Default=False, Android=True}">
     <!-- Minimum-chrome MenuBar: only canonical Windows keyboard accelerators live here.
-         All visible affordances stay in the status bar at the bottom of the editor. -->
+         All visible affordances stay in the status bar at the bottom of the editor (Windows). -->
     <ContentPage.MenuBarItems>
         <MenuBarItem Text="post">
             <MenuFlyoutItem Text="new" Command="{Binding NewPostCommand}">
@@ -50,6 +51,20 @@
         </MenuBarItem>
     </ContentPage.MenuBarItems>
 
+    <!-- Android: editor actions live in the Material top-app-bar overflow menu instead of the
+         desktop bottom status bar (which squished on a phone). ToolbarItems render in the Shell
+         nav bar, shown only on Android (Shell.NavBarIsVisible above); on Windows the nav bar is
+         hidden so they don't appear, and the bottom bar + MenuBar stay canonical. -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="New post" Command="{Binding NewPostCommand}" Order="Secondary" Priority="0" />
+        <ToolbarItem Text="Open post" Command="{Binding OpenPostCommand}" Order="Secondary" Priority="1" />
+        <ToolbarItem Text="Save" Command="{Binding SaveCommand}" Order="Secondary" Priority="2" />
+        <ToolbarItem Text="Publish" Command="{Binding PublishCommand}" Order="Secondary" Priority="3" />
+        <ToolbarItem Text="Preview" Command="{Binding PreviewCommand}" Order="Secondary" Priority="4" />
+        <ToolbarItem Text="Settings" Command="{Binding SettingsCommand}" Order="Secondary" Priority="5" />
+        <ToolbarItem Text="About" Command="{Binding AboutCommand}" Order="Secondary" Priority="6" />
+    </ContentPage.ToolbarItems>
+
     <ContentPage.Resources>
         <conv:RepoSyncStateToColorConverter x:Key="SyncColor" />
         <conv:RepoSyncStateToBrushConverter x:Key="SyncBrush" />
@@ -57,13 +72,16 @@
 
     <Grid>
         <Grid RowDefinitions="*,Auto">
-            <WebView Grid.Row="0"
-                     x:Name="EditorWebView"
-                     BackgroundColor="Transparent"
-                     SemanticProperties.Description="Post body"
-                     SemanticProperties.Hint="The Markdown body of the current post, with GitHub Dark Colorblind syntax highlighting for frontmatter and markdown." />
+            <HybridWebView Grid.Row="0"
+                           x:Name="EditorWebView"
+                           HybridRoot="editor"
+                           DefaultFile="index.html"
+                           BackgroundColor="Transparent"
+                           SemanticProperties.Description="Post body"
+                           SemanticProperties.Hint="The Markdown body of the current post, with GitHub Dark Colorblind syntax highlighting for frontmatter and markdown." />
 
-            <Grid Grid.Row="1" Padding="6,4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="0">
+            <Grid Grid.Row="1" Padding="6,4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="0"
+                  IsVisible="{OnPlatform Default=True, Android=False}">
                 <HorizontalStackLayout Grid.Column="0" Spacing="2">
                     <Button Text="new" Command="{Binding NewPostCommand}"
                             Style="{StaticResource StatusBarButton}"
@@ -131,21 +149,21 @@
               BackgroundColor="{StaticResource Scrim}">
             <Border StrokeThickness="0"
                     BackgroundColor="{StaticResource Ink850}"
-                    Padding="56"
-                    Margin="64"
+                    Padding="{OnPlatform Default=56, Android=24}"
+                    Margin="{OnPlatform Default=64, Android=20}"
                     HorizontalOptions="Fill"
                     VerticalOptions="Fill"
                     StrokeShape="RoundRectangle 8,8,8,8">
-                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="32">
-                    <Label Grid.Row="0" Text="What are we writing about?" FontSize="32"
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="{OnPlatform Default=32, Android=16}">
+                    <Label Grid.Row="0" Text="What are we writing about?" FontSize="{OnPlatform Default=32, Android=22}"
                            FontFamily="HackBold"
                            TextColor="{StaticResource Paper100}"
                            SemanticProperties.HeadingLevel="Level1" />
 
-                    <VerticalStackLayout Grid.Row="1" Spacing="24" VerticalOptions="Center">
+                    <VerticalStackLayout Grid.Row="1" Spacing="{OnPlatform Default=24, Android=14}" VerticalOptions="Center">
                         <Entry Placeholder="Post title" Text="{Binding PromptTitle}"
-                               FontSize="28"
-                               HeightRequest="72"
+                               FontSize="{OnPlatform Default=28, Android=18}"
+                               HeightRequest="{OnPlatform Default=72, Android=48}"
                                BackgroundColor="Transparent"
                                TextColor="{StaticResource Paper100}"
                                PlaceholderColor="{StaticResource Paper500}"
@@ -153,7 +171,7 @@
                                ReturnType="Next"
                                ReturnCommand="{Binding ConfirmTitlePromptCommand}" />
                         <Entry Placeholder="Author (optional)" Text="{Binding PromptAuthor}"
-                               FontSize="18"
+                               FontSize="{OnPlatform Default=18, Android=15}"
                                BackgroundColor="Transparent"
                                TextColor="{StaticResource Paper300}"
                                PlaceholderColor="{StaticResource Paper500}"

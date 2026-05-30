@@ -8,7 +8,7 @@
              x:DataType="vm:OpenPostViewModel"
              x:Name="ThisPage"
              BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
-             Shell.NavBarIsVisible="False"
+             Shell.NavBarIsVisible="{OnPlatform Default=False, Android=True}"
              Title="Open post">
     <!-- Minimum-chrome MenuBar mirroring the editor's: only canonical Windows keyboard
          accelerators live here. "open" / "save" / "publish" are editor-only actions and have
@@ -32,6 +32,14 @@
             <MenuFlyoutItem Text="about" Command="{Binding AboutCommand}" />
         </MenuBarItem>
     </ContentPage.MenuBarItems>
+
+    <!-- Android: home actions live in the Material top-app-bar overflow menu instead of the
+         squished bottom status bar. Shown only on Android (Shell.NavBarIsVisible above). -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="New post" Command="{Binding NewPostCommand}" Order="Secondary" Priority="0" />
+        <ToolbarItem Text="Settings" Command="{Binding OpenSettingsCommand}" Order="Secondary" Priority="1" />
+        <ToolbarItem Text="About" Command="{Binding AboutCommand}" Order="Secondary" Priority="2" />
+    </ContentPage.ToolbarItems>
 
     <ContentPage.Resources>
         <conv:RepoSyncStateToColorConverter x:Key="SyncColor" />
@@ -79,7 +87,8 @@
                            TextColor="{Binding SyncState, Converter={StaticResource SyncColor}}" />
                 </HorizontalStackLayout>
             </HorizontalStackLayout>
-            <HorizontalStackLayout Grid.Column="2" Spacing="2">
+            <HorizontalStackLayout Grid.Column="2" Spacing="2"
+                                   IsVisible="{OnPlatform Default=True, Android=False}">
                 <Button Text="new" Command="{Binding NewPostCommand}"
                         Style="{StaticResource StatusBarButton}"
                         SemanticProperties.Description="New post" />
