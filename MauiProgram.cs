@@ -55,6 +55,12 @@ public static class MauiProgram
         builder.Services.AddTransient<GhTerminalPage>();
         builder.Services.AddTransient<AboutPage>();
 
+        builder.Services.AddSingleton<PreviewRenderer>();
+        builder.Services.AddSingleton<IPreviewStyles, PreviewStyles>();
+        builder.Services.AddSingleton<IPreviewBox, PreviewBox>();
+        builder.Services.AddTransient<PreviewViewModel>();
+        builder.Services.AddTransient<PreviewPage>();
+
         return builder.Build();
     }
 
