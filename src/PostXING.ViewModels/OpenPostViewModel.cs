@@ -88,6 +88,27 @@ public sealed partial class OpenPostViewModel : ObservableObject
         else await RefreshSyncAsync(fetch: true);
     }
 
+    /// <summary>Recomputes the git sync chip for the Local Posts Folder (background fetch when asked).</summary>
+    public async Task RefreshSyncAsync(bool fetch)
+    {
+        try
+        {
+            var status = await _gitStatus.GetStatusAsync(_settings.Current.LocalFolder, fetch);
+            SyncState = status.State;
+            SyncStatus = SyncChip.Label(status);
+            SyncDetail = string.IsNullOrEmpty(status.Detail) ? SyncStatus : status.Detail;
+        }
+        catch
+        {
+            SyncState = RepoSyncState.Unknown;
+            SyncStatus = "sync error";
+            SyncDetail = "Could not read git status.";
+        }
+    }
+
+    [RelayCommand]
+    private Task RefreshSync() => RefreshSyncAsync(fetch: true);
+
     [RelayCommand]
     public async Task RefreshAsync()
     {
