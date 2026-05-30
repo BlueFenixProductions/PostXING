@@ -2,11 +2,13 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:PostXING.ViewModels;assembly=PostXING.ViewModels"
+             xmlns:conv="clr-namespace:PostXING.App.Converters"
+             xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
              x:Class="PostXING.App.Views.OpenPostPage"
              x:DataType="vm:OpenPostViewModel"
              x:Name="ThisPage"
              BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
-             Shell.NavBarIsVisible="False"
+             Shell.NavBarIsVisible="{OnPlatform Default=False, Android=True}"
              Title="Open post">
     <!-- Minimum-chrome MenuBar mirroring the editor's: only canonical Windows keyboard
          accelerators live here. "open" / "save" / "publish" are editor-only actions and have
@@ -30,6 +32,19 @@
             <MenuFlyoutItem Text="about" Command="{Binding AboutCommand}" />
         </MenuBarItem>
     </ContentPage.MenuBarItems>
+
+    <!-- Android: home actions live in the Material top-app-bar overflow menu instead of the
+         squished bottom status bar. Shown only on Android (Shell.NavBarIsVisible above). -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="New post" Command="{Binding NewPostCommand}" Order="Secondary" Priority="0" />
+        <ToolbarItem Text="Settings" Command="{Binding OpenSettingsCommand}" Order="Secondary" Priority="1" />
+        <ToolbarItem Text="About" Command="{Binding AboutCommand}" Order="Secondary" Priority="2" />
+    </ContentPage.ToolbarItems>
+
+    <ContentPage.Resources>
+        <conv:RepoSyncStateToColorConverter x:Key="SyncColor" />
+        <conv:RepoSyncStateToBrushConverter x:Key="SyncBrush" />
+    </ContentPage.Resources>
 
     <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="8">
         <Label Grid.Row="0" Style="{StaticResource Kicker}" Text="[ open post ]"
@@ -56,8 +71,25 @@
         </CollectionView>
 
         <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="0">
-            <Label Grid.Column="0" Style="{StaticResource StatusBarRead}" Text="{Binding StatusMessage}" />
-            <HorizontalStackLayout Grid.Column="2" Spacing="2">
+            <HorizontalStackLayout Grid.Column="0" Spacing="16">
+                <Label Style="{StaticResource StatusBarRead}" Text="{Binding StatusMessage}" />
+                <HorizontalStackLayout Spacing="4" VerticalOptions="Center"
+                                       IsVisible="{OnPlatform Default=True, Android=False}"
+                                       ToolTipProperties.Text="{Binding SyncDetail}"
+                                       SemanticProperties.Description="Git sync status; tap for commit/push/pull">
+                    <HorizontalStackLayout.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnSyncChipTapped" />
+                    </HorizontalStackLayout.GestureRecognizers>
+                    <shapes:Path Aspect="Uniform" HeightRequest="18" WidthRequest="18" VerticalOptions="Center"
+                                 Fill="{Binding SyncState, Converter={StaticResource SyncBrush}}"
+                                 Data="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34c-.46-1.16-1.11-1.47-1.11-1.47c-.91-.62.07-.6.07-.6c1 .07 1.53 1.03 1.53 1.03c.87 1.52 2.34 1.07 2.91.83c.09-.65.35-1.09.63-1.34c-2.22-.25-4.55-1.11-4.55-4.92c0-1.11.38-2 1.03-2.71c-.1-.25-.45-1.29.1-2.64c0 0 .84-.27 2.75 1.02c.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02c.55 1.35.2 2.39.1 2.64c.65.71 1.03 1.6 1.03 2.71c0 3.82-2.34 4.66-4.57 4.91c.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2" />
+                    <Label Style="{StaticResource StatusBarRead}" Text="{Binding SyncStatus}"
+                           VerticalOptions="Center"
+                           TextColor="{Binding SyncState, Converter={StaticResource SyncColor}}" />
+                </HorizontalStackLayout>
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Grid.Column="2" Spacing="2"
+                                   IsVisible="{OnPlatform Default=True, Android=False}">
                 <Button Text="new" Command="{Binding NewPostCommand}"
                         Style="{StaticResource StatusBarButton}"
                         SemanticProperties.Description="New post" />

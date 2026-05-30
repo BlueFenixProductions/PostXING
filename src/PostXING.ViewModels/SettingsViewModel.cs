@@ -8,6 +8,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsStore _store;
     private readonly IGitHubGateway _gateway;
+    private readonly IFolderPicker _folderPicker;
 
     [ObservableProperty] private string _localFolder = string.Empty;
     [ObservableProperty] private string _owner = string.Empty;
@@ -21,10 +22,11 @@ public sealed partial class SettingsViewModel : ObservableObject
     public event EventHandler? CloseRequested;
     public event EventHandler? OpenTerminalRequested;
 
-    public SettingsViewModel(ISettingsStore store, IGitHubGateway gateway)
+    public SettingsViewModel(ISettingsStore store, IGitHubGateway gateway, IFolderPicker folderPicker)
     {
         _store = store;
         _gateway = gateway;
+        _folderPicker = folderPicker;
         var s = store.Current;
         LocalFolder = s.LocalFolder ?? string.Empty;
         Owner = s.Owner ?? string.Empty;
@@ -49,6 +51,13 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [RelayCommand]
     private void OpenTerminal() => OpenTerminalRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    private async Task PickFolderAsync()
+    {
+        var picked = await _folderPicker.PickFolderAsync();
+        if (!string.IsNullOrEmpty(picked)) LocalFolder = picked;
+    }
 
     [RelayCommand]
     private async Task SaveAsync()

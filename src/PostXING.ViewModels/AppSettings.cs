@@ -15,5 +15,7 @@ public sealed record AppSettings(
         LocalFolder: null);
 
     public bool IsGitHubConfigured => !string.IsNullOrWhiteSpace(Owner) && !string.IsNullOrWhiteSpace(Repo);
-    public bool IsLocalConfigured => !string.IsNullOrWhiteSpace(LocalFolder) && System.IO.Directory.Exists(LocalFolder);
+    // Non-empty is enough: the desktop store handles a missing dir by returning an empty list,
+    // and a SAF content:// tree URI (Android) wouldn't satisfy Directory.Exists in any case.
+    public bool IsLocalConfigured => !string.IsNullOrWhiteSpace(LocalFolder);
 }

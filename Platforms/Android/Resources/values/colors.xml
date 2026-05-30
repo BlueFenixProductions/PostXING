@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Native Android theme colors (status bar / splash tint). Blue Fenix brand tokens,
+     mirrored from Resources/Styles/Colors.xaml: PhoenixBlue / PhoenixBlueDeep / SignalCyan. -->
+<resources>
+    <color name="colorPrimary">#1E5BFF</color>
+    <color name="colorPrimaryDark">#0A2BC2</color>
+    <color name="colorAccent">#06B6D4</color>
+</resources>

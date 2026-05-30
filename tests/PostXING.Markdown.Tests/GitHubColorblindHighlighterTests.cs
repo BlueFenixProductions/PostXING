@@ -26,6 +26,31 @@ public sealed class GitHubColorblindHighlighterTests
     }
 
     [Fact]
+    public void Literal_square_brackets_are_classed_md_bracket()
+    {
+        var result = _sut.HighlightToHtml("see [note] here");
+        result.ShouldContain("<span class=\"md-bracket\">[</span>");
+        result.ShouldContain("<span class=\"md-bracket\">]</span>");
+    }
+
+    [Fact]
+    public void Literal_curly_braces_are_classed_md_brace()
+    {
+        var result = _sut.HighlightToHtml("a {var} b");
+        result.ShouldContain("<span class=\"md-brace\">{</span>");
+        result.ShouldContain("<span class=\"md-brace\">}</span>");
+    }
+
+    [Fact]
+    public void Markdown_link_brackets_stay_link_punctuation_not_md_bracket()
+    {
+        // The link rule still owns [text](url) punctuation; only literal brackets become md-bracket.
+        var result = _sut.HighlightToHtml("[text](https://example.com)");
+        result.ShouldContain("class=\"md-link-pct\"");
+        result.ShouldNotContain("md-bracket");
+    }
+
+    [Fact]
     public void Html_unsafe_characters_are_escaped()
     {
         var result = _sut.HighlightToHtml("a < b & c > d");
@@ -262,7 +287,20 @@ public sealed class GitHubColorblindHighlighterTests
 
         result.ShouldContain("class=\"css-sel\"");
         result.ShouldContain(">.foo<");
-        result.ShouldContain("class=\"css-punct\"");
+        // Braces are amber (md-brace) everywhere now, including inside <style>.
+        result.ShouldContain("<span class=\"md-brace\">{</span>");
+        result.ShouldContain("<span class=\"md-brace\">}</span>");
+    }
+
+    [Fact]
+    public void Braces_and_brackets_inside_script_block_are_classed()
+    {
+        var input = "<script setup>\nconst x = { a: [1] }\n</script>\n";
+        var result = _sut.HighlightToHtml(input);
+        result.ShouldContain("<span class=\"md-brace\">{</span>");
+        result.ShouldContain("<span class=\"md-brace\">}</span>");
+        result.ShouldContain("<span class=\"md-bracket\">[</span>");
+        result.ShouldContain("<span class=\"md-bracket\">]</span>");
     }
 
     [Fact]

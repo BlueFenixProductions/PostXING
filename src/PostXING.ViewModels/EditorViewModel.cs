@@ -13,6 +13,8 @@ public sealed partial class EditorViewModel : ObservableObject
     private readonly ISettingsStore _settings;
     private readonly ILocalPostStore _local;
     private readonly TimeProvider _clock;
+    private readonly IGitStatusService _gitStatus;
+    private readonly GitHubPublishService _publishService;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
@@ -38,6 +40,15 @@ public sealed partial class EditorViewModel : ObservableObject
     private string _ghAuthStatus = "gh ?";
 
     [ObservableProperty]
+    private RepoSyncState _syncState = RepoSyncState.Unknown;
+
+    [ObservableProperty]
+    private string _syncStatus = "sync ?";
+
+    [ObservableProperty]
+    private string _syncDetail = "Local repo sync vs the GitHub remote.";
+
+    [ObservableProperty]
     private bool _showTitlePrompt;
 
     [ObservableProperty]
@@ -55,6 +66,7 @@ public sealed partial class EditorViewModel : ObservableObject
     public event EventHandler? OpenPostRequested;
     public event EventHandler? SettingsRequested;
     public event EventHandler? AboutRequested;
+    public event EventHandler? PreviewRequested;
     public event EventHandler? PublishConfirmationRequested;
 
     public EditorViewModel(
@@ -62,16 +74,70 @@ public sealed partial class EditorViewModel : ObservableObject
         IGitHubGateway gateway,
         ISettingsStore settings,
         ILocalPostStore local,
-        TimeProvider clock)
+        TimeProvider clock,
+        IGitStatusService gitStatus,
+        GitHubPublishService publishService)
     {
         _parser = parser;
         _gateway = gateway;
         _settings = settings;
         _local = local;
         _clock = clock;
+        _gitStatus = gitStatus;
+        _publishService = publishService;
 
         BeginNewPost();
         _ = RefreshAuthAsync();
+        _ = RefreshSyncAsync(fetch: false);   // instant local baseline; the page fetches on appear
+    }
+
+    /// <summary>
+    /// Recomputes the git sync chip for the configured Local Posts Folder. <paramref name="fetch"/>
+    /// runs a background `git fetch` first so "needs pull" reflects the live remote.
+    /// </summary>
+    public async Task RefreshSyncAsync(bool fetch)
+    {
+        try
+        {
+            var status = await _gitStatus.GetStatusAsync(_settings.Current.LocalFolder, fetch);
+            SyncState = status.State;
+            SyncStatus = SyncChip.Label(status);
+            SyncDetail = string.IsNullOrEmpty(status.Detail) ? SyncStatus : status.Detail;
+        }
+        catch
+        {
+            SyncState = RepoSyncState.Unknown;
+            SyncStatus = "sync error";
+            SyncDetail = "Could not read git status.";
+        }
+    }
+
+    [RelayCommand]
+    private Task RefreshSync() => RefreshSyncAsync(fetch: true);
+
+    /// <summary>Stage + commit everything under the Local Posts Folder. Refresh the chip after.</summary>
+    public async Task CommitAsync(string message, CancellationToken ct = default)
+    {
+        var folder = _settings.Current.LocalFolder;
+        var result = await _gitStatus.CommitAsync(folder, message, ct);
+        SaveStatus = result.Success ? $"git: {result.Detail}" : $"git commit failed: {result.Detail}";
+        await RefreshSyncAsync(fetch: false);
+    }
+
+    public async Task PushLocalAsync(CancellationToken ct = default)
+    {
+        var folder = _settings.Current.LocalFolder;
+        var result = await _gitStatus.PushAsync(folder, ct);
+        SaveStatus = result.Success ? $"git: {result.Detail}" : $"git push failed: {result.Detail}";
+        await RefreshSyncAsync(fetch: true);
+    }
+
+    public async Task PullLocalAsync(CancellationToken ct = default)
+    {
+        var folder = _settings.Current.LocalFolder;
+        var result = await _gitStatus.PullAsync(folder, ct);
+        SaveStatus = result.Success ? $"git: {result.Detail}" : $"git pull failed: {result.Detail}";
+        await RefreshSyncAsync(fetch: true);
     }
 
     public async Task RefreshAuthAsync()
@@ -126,9 +192,17 @@ public sealed partial class EditorViewModel : ObservableObject
     [RelayCommand]
     private void About() => AboutRequested?.Invoke(this, EventArgs.Empty);
 
+    [RelayCommand]
+    private void Preview() => PreviewRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Host hook to pull the editor's latest text into RawMarkdown before saving.
+    /// Needed on Android, where the JS-&gt;host bridge can't live-sync edits; no-op if unset.</summary>
+    public Func<Task>? SyncBeforeSaveAsync { get; set; }
+
     [RelayCommand(CanExecute = nameof(IsDirty))]
     private async Task SaveAsync()
     {
+        if (SyncBeforeSaveAsync is not null) await SyncBeforeSaveAsync();
         try
         {
             switch (_handle.Source)
@@ -147,16 +221,30 @@ public sealed partial class EditorViewModel : ObservableObject
                         return;
                     }
                     var slug = Slug.From(string.IsNullOrWhiteSpace(FrontMatter.Title) ? "untitled" : FrontMatter.Title);
-                    var fullPath = Path.Combine(folder, "drafts", $"{slug.Value}.md");
-                    await _local.WriteAsync(fullPath, RawMarkdown);
-                    _handle = PostHandle.FromLocalPath(fullPath);
+                    // The store builds the path/URI (desktop: under the folder; Android SAF: under
+                    // the document tree) and returns the opaque id we re-save against thereafter.
+                    var id = await _local.CreateAsync(folder, $"drafts/{slug.Value}.md", RawMarkdown);
+                    _handle = PostHandle.FromLocalPath(id);
                     CurrentPath = _handle.DisplayName;
                     IsDirty = false;
-                    SaveStatus = $"Saved draft as {Path.GetFileName(fullPath)}";
+                    SaveStatus = $"Saved draft as {slug.Value}.md";
                     break;
 
                 case PostSource.GitHub:
-                    SaveStatus = "Saving GitHub-backed posts is not wired yet. Use the gh terminal to commit.";
+                    var ghSettings = _settings.Current;
+                    if (!ghSettings.IsGitHubConfigured)
+                    {
+                        SaveStatus = "Set a GitHub repo in Settings first.";
+                        return;
+                    }
+                    var ghSite = SiteConfig.For(ghSettings.Owner!, ghSettings.Repo!) with { DevelopBranch = ghSettings.DevelopBranch };
+                    var ghPath = _handle.Identifier;
+                    var ghFileName = ghPath[(ghPath.LastIndexOf('/') + 1)..];
+                    await _publishService.SaveToBranchAsync(
+                        ghSite, ghPath, RawMarkdown,
+                        commitMessage: $"edit: {ghFileName}");
+                    IsDirty = false;
+                    SaveStatus = $"Saved to GitHub: {ghPath}";
                     break;
             }
         }
@@ -172,6 +260,45 @@ public sealed partial class EditorViewModel : ObservableObject
         PublishConfirmationRequested?.Invoke(this, EventArgs.Empty);
         return Task.CompletedTask;
     }
+
+    /// <summary>Called by the EditorPage after the publish-confirmation modal closes. Builds
+    /// a <see cref="Post"/> + <see cref="SiteConfig"/> from settings and runs the publish flow,
+    /// surfacing <see cref="PublishState"/> through <see cref="SaveStatus"/>.</summary>
+    public async Task ConfirmPublishAsync(bool autoMerge, CancellationToken ct = default)
+    {
+        var s = _settings.Current;
+        if (!s.IsGitHubConfigured)
+        {
+            SaveStatus = "Set a GitHub repo in Settings first.";
+            return;
+        }
+
+        var slug = Slug.From(string.IsNullOrWhiteSpace(FrontMatter.Title) ? "untitled" : FrontMatter.Title);
+        var today = DateOnly.FromDateTime(_clock.GetUtcNow().UtcDateTime);
+        var post = new Post(slug, FrontMatter, RawMarkdown, today);
+        var site = SiteConfig.For(s.Owner!, s.Repo!) with { DevelopBranch = s.DevelopBranch };
+
+        SaveStatus = autoMerge ? "Publishing (auto-merge on green CI)..." : "Publishing...";
+        try
+        {
+            var state = await _publishService.PublishAsync(post, site, RawMarkdown, autoMerge, ct);
+            SaveStatus = DescribePublishState(state);
+            if (state.Kind != PublishKind.Failed) IsDirty = false;
+        }
+        catch (Exception ex)
+        {
+            SaveStatus = $"Publish failed: {ex.Message}";
+        }
+    }
+
+    private static string DescribePublishState(PublishState state) => state.Kind switch
+    {
+        PublishKind.Failed => $"Publish failed: {state.FailureReason ?? "unknown error"}",
+        PublishKind.Merged => $"Merged ({state.MergeCommitSha?[..Math.Min(7, state.MergeCommitSha.Length)]})",
+        PublishKind.PullRequestOpen when state.PullRequestNumber is int n => $"PR #{n} opened on {state.BranchName}",
+        PublishKind.BranchPushed when state.BranchName is { } b => $"Branch {b} pushed",
+        _ => "Publish: done",
+    };
 
     [RelayCommand]
     private async Task ConfirmTitlePromptAsync()

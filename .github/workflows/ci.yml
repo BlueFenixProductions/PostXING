@@ -32,8 +32,10 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Install MAUI workload
-        run: dotnet workload install maui-windows --skip-sign-check
+      # maui-android too: the App multi-targets net10.0-android, so the full-graph build compiles
+      # the Android head. The windows-latest runner ships the Android SDK the build needs.
+      - name: Install MAUI workloads
+        run: dotnet workload install maui-windows maui-android --skip-sign-check
 
       - name: Cache NuGet packages
         uses: actions/cache@v5

@@ -31,10 +31,17 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<IFrontMatterParser, YamlFrontMatterParser>();
         builder.Services.AddSingleton<IGitHubGateway, GhCliGitHubGateway>();
+        builder.Services.AddSingleton<IGitStatusService>(_ => new GitCliStatusService());
         builder.Services.AddSingleton<GitHubPublishService>();
         builder.Services.AddSingleton(TimeProvider.System);
 
+#if ANDROID
+        builder.Services.AddSingleton<ILocalPostStore, PostXING.App.Platforms.Android.SafLocalPostStore>();
+        builder.Services.AddSingleton<IFolderPicker, PostXING.App.Platforms.Android.SafFolderPicker>();
+#else
         builder.Services.AddSingleton<ILocalPostStore, FileSystemLocalPostStore>();
+        builder.Services.AddSingleton<IFolderPicker, NoOpFolderPicker>();
+#endif
         builder.Services.AddSingleton<ISettingsStore>(_ =>
         {
             var store = new FileSystemSettingsStore();
@@ -54,11 +61,21 @@ public static class MauiProgram
         builder.Services.AddTransient<GhTerminalPage>();
         builder.Services.AddTransient<AboutPage>();
 
+        builder.Services.AddSingleton<PreviewRenderer>();
+        builder.Services.AddSingleton<IPreviewStyles, PreviewStyles>();
+        builder.Services.AddSingleton<IPreviewBox, PreviewBox>();
+        builder.Services.AddTransient<PreviewViewModel>();
+        builder.Services.AddTransient<PreviewPage>();
+
         return builder.Build();
     }
 
     private static void RefreshProcessPathFromRegistry()
     {
+        // Windows-registry PATH refresh for the gh/git shell-out path. No-op elsewhere:
+        // Android has no machine/user PATH registry and no CLI to find.
+        if (!OperatingSystem.IsWindows()) return;
+
         var machinePath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? string.Empty;
         var userPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? string.Empty;
         var merged = string.IsNullOrEmpty(userPath) ? machinePath : $"{machinePath};{userPath}";

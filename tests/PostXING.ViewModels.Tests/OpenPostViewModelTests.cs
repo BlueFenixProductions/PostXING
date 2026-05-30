@@ -20,7 +20,10 @@ public sealed class OpenPostViewModelTests
         var settings = Substitute.For<ISettingsStore>();
         settings.Current.Returns(AppSettings.Default);
         var local = Substitute.For<ILocalPostStore>();
-        return (new OpenPostViewModel(gateway, settings, local), gateway, settings, local);
+        var git = Substitute.For<IGitStatusService>();
+        git.GetStatusAsync(Arg.Any<string?>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(new RepoSyncStatus(RepoSyncState.Unknown, 0, 0, 0, "stub"));
+        return (new OpenPostViewModel(gateway, settings, local, git), gateway, settings, local);
     }
 
     // Hoisted to static fields so the sort assertions/setups below don't pass constant
@@ -98,24 +101,22 @@ public sealed class OpenPostViewModelTests
     public async Task Local_entries_are_listed_newest_first_by_last_write_time()
     {
         var (vm, _, settings, local) = CreateVm();
-        var folder = Directory.CreateTempSubdirectory().FullName;
-        try
+        // IsLocalConfigured is non-empty-only — no real directory needed. The store is the
+        // source of truth for what actually exists at that opaque identifier (path or SAF URI).
+        const string folder = @"C:\not-a-real-path";
+        settings.Current.Returns(AppSettings.Default with { LocalFolder = folder });
+        var baseTime = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        // Returned in arbitrary (oldest-first) order; the VM must re-sort newest-first.
+        local.List(folder).Returns(new[]
         {
-            settings.Current.Returns(AppSettings.Default with { LocalFolder = folder });
-            var baseTime = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-            // Returned in arbitrary (oldest-first) order; the VM must re-sort newest-first.
-            local.List(folder).Returns(new[]
-            {
-                new LocalPostFile(@"C:\p\drafts\old.md",    "drafts/old.md",    baseTime),
-                new LocalPostFile(@"C:\p\drafts\newest.md", "drafts/newest.md", baseTime.AddDays(10)),
-                new LocalPostFile(@"C:\p\drafts\mid.md",    "drafts/mid.md",    baseTime.AddDays(5)),
-            });
+            new LocalPostFile(@"C:\p\drafts\old.md",    "drafts/old.md",    baseTime),
+            new LocalPostFile(@"C:\p\drafts\newest.md", "drafts/newest.md", baseTime.AddDays(10)),
+            new LocalPostFile(@"C:\p\drafts\mid.md",    "drafts/mid.md",    baseTime.AddDays(5)),
+        });
 
-            await vm.RefreshAsync();
+        await vm.RefreshAsync();
 
-            vm.Entries.Select(e => e.DisplayName).ShouldBe(LocalDraftsNewestFirst);
-        }
-        finally { Directory.Delete(folder, recursive: true); }
+        vm.Entries.Select(e => e.DisplayName).ShouldBe(LocalDraftsNewestFirst);
     }
 
     [Fact]

@@ -32,6 +32,8 @@
   --punctuation: #d2a8ff;
   --caret: #79c0ff;
   --selection: rgba(56, 139, 253, 0.30);
+  --bracket: #06B6D4;   /* [ ] square brackets - cyan (kicker SignalCyan) */
+  --brace: #ffa657;     /* { } curly braces - amber */
 }
 
 body.light {
@@ -48,6 +50,8 @@ body.light {
   --punctuation: #6e7781;
   --caret: #0550ae;
   --selection: rgba(84, 174, 255, 0.30);
+  --bracket: #0E7490;   /* [ ] square brackets - cyan (kicker SignalCyanDeep) */
+  --brace: #953800;     /* { } curly braces - amber */
 }
 
 html, body {
@@ -67,7 +71,10 @@ html, body {
   caret-color: var(--caret);
   padding: 8px 12px;
   box-sizing: border-box;
-  height: 100vh;
+  /* --vv-h is updated from the visualViewport API in JS — it's the actual visible area
+     height excluding the Android soft keyboard, which is more reliable than 100vh / 100%
+     across WebView versions where AdjustResize doesn't shrink the layout viewport. */
+  height: var(--vv-h, 100%);
   overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-word;
@@ -104,6 +111,8 @@ html, body {
 .md-bq { color: var(--string); font-style: italic; }
 .md-hr { color: var(--punctuation); }
 .md-html { color: var(--comment); }
+.md-bracket { color: var(--bracket); }
+.md-brace { color: var(--brace); }
 
 .html { color: var(--keyword); font-weight: 700; }
 .html-attr { color: var(--variable); }
@@ -126,7 +135,10 @@ html, body {
 </style>
 </head>
 <body>
-<div id="editor" contenteditable="true" spellcheck="false" autocorrect="off" autocapitalize="off"></div>
+<!-- plaintext-only: the IME inserts plain '\n' on Enter (no div/br wrapping), and the
+     contenteditable doesn't accept rich-paste DOM that would confuse the highlighter.
+     We still set innerHTML ourselves from highlight() to apply syntax colors. -->
+<div id="editor" contenteditable="plaintext-only" spellcheck="false" autocorrect="off" autocapitalize="off"></div>
 
 <script>
 (function () {
@@ -238,6 +250,11 @@ html, body {
           continue;
         }
       }
+
+      // Delimiters: square brackets blue, curly braces amber (literal, when not consumed
+      // by the link/image rules above).
+      if (c === '[' || c === ']') { out += '<span class="md-bracket">' + c + '</span>'; i++; continue; }
+      if (c === '{' || c === '}') { out += '<span class="md-brace">' + c + '</span>'; i++; continue; }
 
       out += escapeHtml(c);
       i++;
@@ -373,7 +390,7 @@ html, body {
   function renderCssWithPunct(line) {
     let out = '';
     for (const ch of line) {
-      if (ch === '{' || ch === '}') out += '<span class="css-punct">' + ch + '</span>';
+      if (ch === '{' || ch === '}') out += '<span class="md-brace">' + ch + '</span>';
       else out += escapeHtml(ch);
     }
     return out;
@@ -426,7 +443,7 @@ html, body {
         const after = seg.slice(closeIdx + 1);
         if (before.trim() !== '') out += cssLine(before);
         else out += escapeHtml(before);
-        out += '<span class="css-punct">}</span>';
+        out += '<span class="md-brace">}</span>';
         if (after !== '') out += escapeHtml(after);
         if (i < parts.length - 1) out += '<span class="css-punct">;</span>';
         continue;
@@ -446,7 +463,7 @@ html, body {
     if (braceIdx >= 0) {
       const head = line.slice(0, braceIdx);
       const tail = line.slice(braceIdx + 1);
-      let out = renderCssSelector(head) + '<span class="css-punct">{</span>';
+      let out = renderCssSelector(head) + '<span class="md-brace">{</span>';
       if (tail !== '') out += renderCssDeclarations(tail);
       return out;
     }
@@ -564,6 +581,10 @@ html, body {
         }
         continue;
       }
+
+      // Delimiters: square brackets cyan, curly braces amber, even inside <script>.
+      if (c === '[' || c === ']') { out += '<span class="md-bracket">' + c + '</span>'; i++; continue; }
+      if (c === '{' || c === '}') { out += '<span class="md-brace">' + c + '</span>'; i++; continue; }
 
       out += escapeHtml(c);
       i++;
@@ -728,13 +749,59 @@ html, body {
     setCaretOffset(editor, offset);
   }
 
+  // Keep the editor sized to the visual viewport (the actual visible area, excluding the
+  // Android soft keyboard). Without this, AdjustResize doesn't always shrink the WebView's
+  // layout viewport, and content scrolls "off the bottom" behind the keyboard.
+  function syncEditorHeight() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    document.documentElement.style.setProperty('--vv-h', vv.height + 'px');
+  }
+  syncEditorHeight();
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+      syncEditorHeight();
+      // Once the keyboard finishes appearing, bring the caret back into view; a frame's
+      // delay so the new height has been applied and rects are fresh.
+      requestAnimationFrame(scrollCaretIntoView);
+    });
+  }
+
+  // Keep the caret visible inside the editor's own scrollable area. Deferred a frame so
+  // it runs after the post-input layout pass — getBoundingClientRect is stale otherwise.
+  function scrollCaretIntoView() {
+    requestAnimationFrame(() => {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      let rect = range.getBoundingClientRect();
+      // Collapsed range at end-of-line / empty position returns (0,0,0,0) on Android
+      // WebView; fall back to the containing element's rect so we still know the line Y.
+      if (rect.top === 0 && rect.bottom === 0 && rect.left === 0) {
+        const node = range.endContainer;
+        const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+        if (el) rect = el.getBoundingClientRect();
+      }
+      if (rect.top === 0 && rect.bottom === 0) {
+        editor.scrollTop = editor.scrollHeight;
+        return;
+      }
+      const editorRect = editor.getBoundingClientRect();
+      const margin = 40;
+      if (rect.bottom > editorRect.bottom - margin) {
+        editor.scrollTop += (rect.bottom - editorRect.bottom + margin);
+      } else if (rect.top < editorRect.top + margin) {
+        editor.scrollTop -= (editorRect.top + margin - rect.top);
+      }
+    });
+  }
+
   // Push text to host. Debounced one rAF so we batch keystrokes.
   let outgoingScheduled = false;
   function postToHost(message) {
-    if (window.PostXINGNative && typeof window.PostXINGNative.postToHost === 'function') {
-      window.PostXINGNative.postToHost(message);
-    } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
-      window.chrome.webview.postMessage(message);
+    // MAUI HybridWebView raw channel (Windows + Android). JS -> host.
+    if (window.HybridWebView && typeof window.HybridWebView.SendRawMessage === 'function') {
+      window.HybridWebView.SendRawMessage(message);
     }
   }
   function scheduleOutgoing() {
@@ -749,8 +816,30 @@ html, body {
     });
   }
 
-  editor.addEventListener('input', () => {
+  // IME composition state. On Android, voice dictation and predictive text run through
+  // the IME composition pipeline — fires compositionstart, then compositionupdate per
+  // chunk, then compositionend when committed. If we replace innerHTML mid-composition
+  // (via rehighlight), the composition is aborted and the user loses input. Also: Enter
+  // pressed during composition typically commits the composition without inserting the
+  // newline. So while composing we suppress rehighlight and let the IME deposit text
+  // freely; on compositionend we run one rehighlight to colorize the committed input.
+  let composing = false;
+  editor.addEventListener('compositionstart', () => { composing = true; });
+  editor.addEventListener('compositionend', () => {
+    composing = false;
     rehighlight();
+    scrollCaretIntoView();
+    scheduleOutgoing();
+  });
+
+  editor.addEventListener('input', (e) => {
+    if (composing || (e && e.isComposing)) {
+      // Still let the host pull the latest text on Save (it calls getText()) — only
+      // skip the visible highlight + post-message churn.
+      return;
+    }
+    rehighlight();
+    scrollCaretIntoView();
     scheduleOutgoing();
   });
 
@@ -820,14 +909,17 @@ html, body {
     focus() {
       editor.focus();
     },
+    getText() {
+      return editor.innerText;
+    },
     getDiag() {
       return diagLog.join('\n');
     }
   };
 
-  // Incoming messages from C# arrive via the injected dispatch script in
-  // EditorPage.OnEditorWebViewHandlerChanged, which routes window.chrome.webview
-  // 'message' events to window.PostXING.handleHostMessage.
+  // Incoming messages from C# (host -> JS) arrive on the MAUI HybridWebView raw
+  // channel as a "HybridWebViewMessageReceived" window event; route them to the
+  // same JSON handler used before ({ type: 'setText' | 'setTheme', ... }).
   window.PostXING.handleHostMessage = function handleHostMessage(raw) {
     try {
       const msg = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -839,21 +931,24 @@ html, body {
       diag('bad host message: ' + err.message);
     }
   };
-  // Drain any messages that landed before this handler was registered.
-  if (window.__earlyHostMessages && window.__earlyHostMessages.length) {
-    diag('draining ' + window.__earlyHostMessages.length + ' early host msgs');
-    for (const m of window.__earlyHostMessages) window.PostXING.handleHostMessage(m);
-    window.__earlyHostMessages = [];
-  }
+  window.addEventListener('HybridWebViewMessageReceived', function (e) {
+    if (e && e.detail && typeof e.detail.message === 'string') {
+      window.PostXING.handleHostMessage(e.detail.message);
+    }
+  });
 
-  // Tell host we're ready. The chrome.webview channel is injected at document-create time,
-  // so it's already there. No polling needed.
+  // Tell host we're ready. The HybridWebView bridge (window.HybridWebView) is
+  // injected by MAUI before our scripts run, so it's already available.
   function announceReady() {
-    if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+    if (window.HybridWebView && typeof window.HybridWebView.SendRawMessage === 'function') {
       diag('ready sent');
       postToHost(JSON.stringify({ type: 'ready' }));
     } else {
-      diag('chrome.webview missing — bridge cannot work in this WebView');
+      // MAUI injects the HybridWebView bridge asynchronously on Android and it may not be
+      // present yet at 'load'. Poll until it appears instead of giving up after one shot
+      // (WebView2 injected its channel at document-create, which masked this on Windows).
+      diag('HybridWebView bridge not ready yet, retrying...');
+      setTimeout(announceReady, 50);
     }
   }
   if (document.readyState === 'complete') {
