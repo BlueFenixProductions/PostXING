@@ -32,6 +32,8 @@
   --punctuation: #d2a8ff;
   --caret: #79c0ff;
   --selection: rgba(56, 139, 253, 0.30);
+  --bracket: #06B6D4;   /* [ ] square brackets - cyan (kicker SignalCyan) */
+  --brace: #ffa657;     /* { } curly braces - amber */
 }
 
 body.light {
@@ -48,6 +50,8 @@ body.light {
   --punctuation: #6e7781;
   --caret: #0550ae;
   --selection: rgba(84, 174, 255, 0.30);
+  --bracket: #0E7490;   /* [ ] square brackets - cyan (kicker SignalCyanDeep) */
+  --brace: #953800;     /* { } curly braces - amber */
 }
 
 html, body {
@@ -104,6 +108,8 @@ html, body {
 .md-bq { color: var(--string); font-style: italic; }
 .md-hr { color: var(--punctuation); }
 .md-html { color: var(--comment); }
+.md-bracket { color: var(--bracket); }
+.md-brace { color: var(--brace); }
 
 .html { color: var(--keyword); font-weight: 700; }
 .html-attr { color: var(--variable); }
@@ -239,6 +245,11 @@ html, body {
         }
       }
 
+      // Delimiters: square brackets blue, curly braces amber (literal, when not consumed
+      // by the link/image rules above).
+      if (c === '[' || c === ']') { out += '<span class="md-bracket">' + c + '</span>'; i++; continue; }
+      if (c === '{' || c === '}') { out += '<span class="md-brace">' + c + '</span>'; i++; continue; }
+
       out += escapeHtml(c);
       i++;
     }
@@ -373,7 +384,7 @@ html, body {
   function renderCssWithPunct(line) {
     let out = '';
     for (const ch of line) {
-      if (ch === '{' || ch === '}') out += '<span class="css-punct">' + ch + '</span>';
+      if (ch === '{' || ch === '}') out += '<span class="md-brace">' + ch + '</span>';
       else out += escapeHtml(ch);
     }
     return out;
@@ -426,7 +437,7 @@ html, body {
         const after = seg.slice(closeIdx + 1);
         if (before.trim() !== '') out += cssLine(before);
         else out += escapeHtml(before);
-        out += '<span class="css-punct">}</span>';
+        out += '<span class="md-brace">}</span>';
         if (after !== '') out += escapeHtml(after);
         if (i < parts.length - 1) out += '<span class="css-punct">;</span>';
         continue;
@@ -446,7 +457,7 @@ html, body {
     if (braceIdx >= 0) {
       const head = line.slice(0, braceIdx);
       const tail = line.slice(braceIdx + 1);
-      let out = renderCssSelector(head) + '<span class="css-punct">{</span>';
+      let out = renderCssSelector(head) + '<span class="md-brace">{</span>';
       if (tail !== '') out += renderCssDeclarations(tail);
       return out;
     }
@@ -564,6 +575,10 @@ html, body {
         }
         continue;
       }
+
+      // Delimiters: square brackets cyan, curly braces amber, even inside <script>.
+      if (c === '[' || c === ']') { out += '<span class="md-bracket">' + c + '</span>'; i++; continue; }
+      if (c === '{' || c === '}') { out += '<span class="md-brace">' + c + '</span>'; i++; continue; }
 
       out += escapeHtml(c);
       i++;
@@ -731,10 +746,9 @@ html, body {
   // Push text to host. Debounced one rAF so we batch keystrokes.
   let outgoingScheduled = false;
   function postToHost(message) {
-    if (window.PostXINGNative && typeof window.PostXINGNative.postToHost === 'function') {
-      window.PostXINGNative.postToHost(message);
-    } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
-      window.chrome.webview.postMessage(message);
+    // MAUI HybridWebView raw channel (Windows + Android). JS -> host.
+    if (window.HybridWebView && typeof window.HybridWebView.SendRawMessage === 'function') {
+      window.HybridWebView.SendRawMessage(message);
     }
   }
   function scheduleOutgoing() {
@@ -820,14 +834,17 @@ html, body {
     focus() {
       editor.focus();
     },
+    getText() {
+      return editor.innerText;
+    },
     getDiag() {
       return diagLog.join('\n');
     }
   };
 
-  // Incoming messages from C# arrive via the injected dispatch script in
-  // EditorPage.OnEditorWebViewHandlerChanged, which routes window.chrome.webview
-  // 'message' events to window.PostXING.handleHostMessage.
+  // Incoming messages from C# (host -> JS) arrive on the MAUI HybridWebView raw
+  // channel as a "HybridWebViewMessageReceived" window event; route them to the
+  // same JSON handler used before ({ type: 'setText' | 'setTheme', ... }).
   window.PostXING.handleHostMessage = function handleHostMessage(raw) {
     try {
       const msg = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -839,21 +856,24 @@ html, body {
       diag('bad host message: ' + err.message);
     }
   };
-  // Drain any messages that landed before this handler was registered.
-  if (window.__earlyHostMessages && window.__earlyHostMessages.length) {
-    diag('draining ' + window.__earlyHostMessages.length + ' early host msgs');
-    for (const m of window.__earlyHostMessages) window.PostXING.handleHostMessage(m);
-    window.__earlyHostMessages = [];
-  }
+  window.addEventListener('HybridWebViewMessageReceived', function (e) {
+    if (e && e.detail && typeof e.detail.message === 'string') {
+      window.PostXING.handleHostMessage(e.detail.message);
+    }
+  });
 
-  // Tell host we're ready. The chrome.webview channel is injected at document-create time,
-  // so it's already there. No polling needed.
+  // Tell host we're ready. The HybridWebView bridge (window.HybridWebView) is
+  // injected by MAUI before our scripts run, so it's already available.
   function announceReady() {
-    if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+    if (window.HybridWebView && typeof window.HybridWebView.SendRawMessage === 'function') {
       diag('ready sent');
       postToHost(JSON.stringify({ type: 'ready' }));
     } else {
-      diag('chrome.webview missing — bridge cannot work in this WebView');
+      // MAUI injects the HybridWebView bridge asynchronously on Android and it may not be
+      // present yet at 'load'. Poll until it appears instead of giving up after one shot
+      // (WebView2 injected its channel at document-create, which masked this on Windows).
+      diag('HybridWebView bridge not ready yet, retrying...');
+      setTimeout(announceReady, 50);
     }
   }
   if (document.readyState === 'complete') {

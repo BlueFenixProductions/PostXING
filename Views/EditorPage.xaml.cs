@@ -2,17 +2,16 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Maui.ApplicationModel;
-using Microsoft.Web.WebView2.Core;
+using Microsoft.Maui.Storage;
 using PostXING.ViewModels;
 
 namespace PostXING.App.Views;
 
 internal static class BridgeLog
 {
-    private static readonly string LogPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "PostXING",
-        "bridge.log");
+    // AppDataDirectory is cross-platform (per-user app data on Windows, app-private
+    // files dir on Android), so the bridge trace works the same on both heads.
+    private static readonly string LogPath = Path.Combine(FileSystem.AppDataDirectory, "bridge.log");
     private static readonly Lock Sync = new();
 
     static BridgeLog()
@@ -30,6 +29,11 @@ internal static class BridgeLog
     {
         try
         {
+#if ANDROID
+            // run-as can't read the file on a hardened ROM (CalyxOS), so mirror to logcat:
+            //   adb logcat -s PXBRIDGE
+            Android.Util.Log.Info("PXBRIDGE", message);
+#endif
             lock (Sync)
             {
                 File.AppendAllText(LogPath, $"{DateTime.Now:HH:mm:ss.fff} {message}\n");
@@ -41,30 +45,41 @@ internal static class BridgeLog
 
 public partial class EditorPage : ContentPage
 {
-    private const string VirtualHost = "postxing.editor";
-
     private readonly EditorViewModel _vm;
     private readonly IPendingPostBox _box;
+    private readonly IPreviewBox _previewBox;
 
-    private CoreWebView2? _coreWv;
     private bool _editorReady;
     private string _lastSyncedText = string.Empty;
     private bool _suppressOutgoingPropertyChanged;
 
-    public EditorPage(EditorViewModel vm, IPendingPostBox box)
+    public EditorPage(EditorViewModel vm, IPendingPostBox box, IPreviewBox previewBox)
     {
         InitializeComponent();
         BindingContext = _vm = vm;
         _box = box;
+        _previewBox = previewBox;
 
         // Open is the Shell root and the editor is pushed on top of it, so "open" pops
         // back to the home screen rather than pushing a second copy of it.
         vm.OpenPostRequested += async (_, _) => await Shell.Current.GoToAsync("..");
         vm.SettingsRequested += async (_, _) => await Shell.Current.GoToAsync("settings");
         vm.AboutRequested += async (_, _) => await Shell.Current.GoToAsync("about");
+        vm.PreviewRequested += async (_, _) =>
+        {
+            _previewBox.Put(_vm.RawMarkdown);
+            await Shell.Current.GoToAsync("preview");
+        };
         vm.PropertyChanged += OnViewModelPropertyChanged;
 
-        EditorWebView.HandlerChanged += OnEditorWebViewHandlerChanged;
+#if ANDROID
+        // Android's JS->host bridge can't live-sync edits, so pull the editor text on save.
+        vm.SyncBeforeSaveAsync = SyncEditorTextBeforeSaveAsync;
+#endif
+
+        // HybridWebView serves Resources/Raw/editor (HybridRoot) and exposes a raw
+        // message channel on both Windows and Android. JS -> host arrives here.
+        EditorWebView.RawMessageReceived += OnRawMessageReceived;
 
         if (Application.Current is not null)
             Application.Current.RequestedThemeChanged += OnAppThemeChanged;
@@ -76,84 +91,34 @@ public partial class EditorPage : ContentPage
         var pending = _box.Take();
         if (pending is not null) _vm.LoadPost(pending.Handle, pending.Contents);
         _ = _vm.RefreshAuthAsync();
-        _ = PushTextAsync(_vm.RawMarkdown);
+        _ = _vm.RefreshSyncAsync(fetch: true);   // background git fetch + recompute the sync chip
+        _ = SeedEditorAsync();
     }
 
-    private async void OnEditorWebViewHandlerChanged(object? sender, EventArgs e)
+    // The page loads asynchronously and the JS->host bridge is dead on Android, so there's no
+    // 'ready' signal to wait on. Fire the current text + theme on a short schedule so the seed
+    // lands as soon as window.PostXING (defined by index.html) exists; the if-guard in the JS
+    // makes pre-load pushes harmless no-ops. After this, OnViewModelPropertyChanged keeps the
+    // editor in sync (e.g. the title-prompt seed once the user confirms).
+    private async Task SeedEditorAsync()
     {
-        BridgeLog.Write("HandlerChanged fired");
-
-        if (EditorWebView.Handler?.PlatformView is not Microsoft.UI.Xaml.Controls.WebView2 wv2)
+        for (var i = 0; i < 12; i++)   // ~3s of attempts to cover page load
         {
-            BridgeLog.Write($"HandlerChanged: PlatformView is not WebView2 (got {EditorWebView.Handler?.PlatformView?.GetType().FullName ?? "<null>"})");
-            return;
-        }
-
-        try
-        {
-            await wv2.EnsureCoreWebView2Async();
-            var core = wv2.CoreWebView2;
-            _coreWv = core;
-            BridgeLog.Write("CoreWebView2 ready");
-
-            // Map https://postxing.editor/ to the on-disk editor folder.
-            var editorFolder = Path.Combine(AppContext.BaseDirectory, "editor");
-            BridgeLog.Write($"Mapping virtual host {VirtualHost} → {editorFolder}");
-            core.SetVirtualHostNameToFolderMapping(
-                VirtualHost,
-                editorFolder,
-                CoreWebView2HostResourceAccessKind.Allow);
-
-            // Inject minimal bridge: host → JS via window event; JS → host via postMessage.
-            await core.AddScriptToExecuteOnDocumentCreatedAsync(@"
-window.PostXINGNative = {
-    postToHost: function(message) {
-        if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
-            window.chrome.webview.postMessage(message);
-        }
-    }
-};
-if (window.chrome && window.chrome.webview) {
-    window.chrome.webview.addEventListener('message', function(e) {
-        if (window.PostXING && typeof window.PostXING.handleHostMessage === 'function') {
-            window.PostXING.handleHostMessage(e.data);
-        } else {
-            window.__earlyHostMessages = window.__earlyHostMessages || [];
-            window.__earlyHostMessages.push(e.data);
-        }
-    });
-}
-");
-            BridgeLog.Write("Bridge JS script registered");
-
-            core.WebMessageReceived += OnWebMessageReceived;
-            BridgeLog.Write("WebMessageReceived subscribed");
-
-            // Theme defaults
             await PushThemeAsync();
-
-            core.Navigate($"https://{VirtualHost}/index.html");
-            BridgeLog.Write($"Navigate to https://{VirtualHost}/index.html");
-        }
-        catch (Exception ex)
-        {
-            BridgeLog.Write($"HandlerChanged exception {ex.GetType().Name}: {ex.Message}");
+            await PushTextAsync(_vm.RawMarkdown);
+            await Task.Delay(250);
         }
     }
 
-    private async void OnWebMessageReceived(
-        CoreWebView2 sender,
-        CoreWebView2WebMessageReceivedEventArgs args)
+    private async void OnRawMessageReceived(object? sender, HybridWebViewRawMessageReceivedEventArgs e)
     {
-        string raw;
-        try { raw = args.TryGetWebMessageAsString(); }
-        catch { BridgeLog.Write("WebMessageReceived: TryGetWebMessageAsString threw"); return; }
-
-        BridgeLog.Write($"WebMessageReceived raw='{raw}'");
+        var raw = e.Message;
+        BridgeLog.Write($"RawMessageReceived raw='{raw}'");
+        if (string.IsNullOrEmpty(raw)) return;
 
         try
         {
-            using var doc = JsonDocument.Parse(raw ?? "{}");
+            using var doc = JsonDocument.Parse(raw);
             var root = doc.RootElement;
             if (!root.TryGetProperty("type", out var typeEl)) return;
             var type = typeEl.GetString();
@@ -162,7 +127,6 @@ if (window.chrome && window.chrome.webview) {
             {
                 _editorReady = true;
                 BridgeLog.Write($"ready received → pushing {_vm.RawMarkdown.Length} chars + theme");
-                // Drain any messages that arrived before the JS listener was wired.
                 await PushThemeAsync();
                 await PushTextAsync(_vm.RawMarkdown);
             }
@@ -178,7 +142,7 @@ if (window.chrome && window.chrome.webview) {
         }
         catch (JsonException ex)
         {
-            BridgeLog.Write($"WebMessageReceived JsonException: {ex.Message}");
+            BridgeLog.Write($"RawMessageReceived JsonException: {ex.Message}");
         }
     }
 
@@ -193,44 +157,74 @@ if (window.chrome && window.chrome.webview) {
     private async void OnAppThemeChanged(object? sender, AppThemeChangedEventArgs e) =>
         await PushThemeAsync();
 
-    private async Task PushTextAsync(string text)
+    private Task PushTextAsync(string text)
     {
-        if (!_editorReady || _coreWv is null)
-        {
-            BridgeLog.Write($"PushTextAsync skipped: editorReady={_editorReady}, hasCoreWv={_coreWv is not null}, text length={text?.Length ?? 0}");
-            return;
-        }
-
         var t = text ?? string.Empty;
         _lastSyncedText = t;
 
-        var payload = JsonSerializer.Serialize(new { type = "setText", text = t });
-        BridgeLog.Write($"PushTextAsync posting {t.Length} chars");
+        // Base64 so arbitrary markdown (quotes, newlines, unicode) survives MAUI's
+        // EvaluateJavaScriptAsync URL-encode round-trip; index.html base64-decodes in setTextB64.
+        var b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(t));
+        BridgeLog.Write($"PushText firing {t.Length} chars");
 
-        await MainThread.InvokeOnMainThreadAsync(() =>
+        MainThread.BeginInvokeOnMainThread(() =>
         {
             try
             {
-                _coreWv!.PostWebMessageAsString(payload);
-                BridgeLog.Write("PushTextAsync PostWebMessageAsString returned");
+                // Fire-and-forget: MAUI's EvaluateJavaScriptAsync Task never completes on this
+                // Android HybridWebView, but the JS still runs. Awaiting it would hang. The
+                // if-guard makes a push before index.html has loaded a harmless no-op.
+                _ = EditorWebView.EvaluateJavaScriptAsync($"if(window.PostXING){{window.PostXING.setTextB64('{b64}')}}");
             }
-            catch (Exception ex)
-            {
-                BridgeLog.Write($"PushTextAsync threw {ex.GetType().Name}: {ex.Message}");
-            }
+            catch (Exception ex) { BridgeLog.Write($"PushText threw {ex.GetType().Name}: {ex.Message}"); }
         });
+        return Task.CompletedTask;
     }
 
-    private async Task PushThemeAsync()
+    private Task PushThemeAsync()
     {
-        if (_coreWv is null) return;
         var theme = Application.Current?.RequestedTheme == AppTheme.Light ? "light" : "dark";
-        var payload = JsonSerializer.Serialize(new { type = "setTheme", theme });
-
-        await MainThread.InvokeOnMainThreadAsync(() =>
+        MainThread.BeginInvokeOnMainThread(() =>
         {
-            try { _coreWv!.PostWebMessageAsString(payload); }
-            catch (Exception ex) { BridgeLog.Write($"PushThemeAsync threw {ex.GetType().Name}: {ex.Message}"); }
+            try { _ = EditorWebView.EvaluateJavaScriptAsync($"if(window.PostXING){{window.PostXING.setTheme('{theme}')}}"); }
+            catch (Exception ex) { BridgeLog.Write($"PushTheme threw {ex.GetType().Name}: {ex.Message}"); }
         });
+        return Task.CompletedTask;
     }
+
+#if ANDROID
+    // Pull the editor's current text via EvaluateJavaScriptAsync (which returns at stable times,
+    // unlike during page load) into the ViewModel before saving. Echo push-back is suppressed,
+    // and it times out defensively so Save never blocks if eval hangs.
+    private async Task SyncEditorTextBeforeSaveAsync()
+    {
+        try
+        {
+            var evalTask = MainThread.InvokeOnMainThreadAsync(
+                () => EditorWebView.EvaluateJavaScriptAsync("window.PostXING.getText()"));
+            var done = await Task.WhenAny(evalTask, Task.Delay(2500));
+            if (done != evalTask) { BridgeLog.Write("SyncBeforeSave: getText timed out"); return; }
+
+            var text = DecodeEvalString(evalTask.Result);
+            if (text == _vm.RawMarkdown) return;
+
+            _lastSyncedText = text;
+            _suppressOutgoingPropertyChanged = true;
+            try { _vm.RawMarkdown = text; }
+            finally { _suppressOutgoingPropertyChanged = false; }
+            BridgeLog.Write($"SyncBeforeSave pulled {text.Length} chars");
+        }
+        catch (Exception ex) { BridgeLog.Write($"SyncBeforeSave threw {ex.GetType().Name}: {ex.Message}"); }
+    }
+
+    // EvaluateJavaScriptAsync returns a JS string JSON-escaped (\n, \", maybe outer-quoted);
+    // decode it back to the raw markdown source.
+    private static string DecodeEvalString(string? raw)
+    {
+        if (string.IsNullOrEmpty(raw)) return string.Empty;
+        var json = raw.Length >= 2 && raw[0] == '"' && raw[^1] == '"' ? raw : "\"" + raw + "\"";
+        try { return JsonSerializer.Deserialize<string>(json) ?? raw; }
+        catch { return raw; }
+    }
+#endif
 }

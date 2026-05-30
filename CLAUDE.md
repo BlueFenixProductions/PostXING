@@ -114,6 +114,8 @@ Posts and drafts live in two flat top-level folders inside the user's local fold
 
 The app never pushes directly to `stage` or `main`.
 
+**Branch protection is live on `main` and `stage`** (since 2026-05-29). Both require a PR plus the `Build + Test` CI check before merge; `main` also requires linear history. `enforce_admins` is off, so the operator/admin can still push or fast-forward directly (the escape hatch used for the px4 square-one promotion) — everyone else, and normal flow, goes through PRs (`develop` → `stage` → `main`). Force-pushes and deletions are blocked on both; a true force-rewrite needs `allow_force_pushes` toggled off first. CI fires only on these two gate branches (push + PR); check `develop` on demand with `gh workflow run CI --ref develop`.
+
 ## Identity / packaging
 
 - `ApplicationId` = `net.bluefenix.postxing`

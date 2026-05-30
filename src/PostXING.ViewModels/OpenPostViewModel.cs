@@ -12,6 +12,7 @@ public sealed partial class OpenPostViewModel : ObservableObject
     private readonly IGitHubGateway _gateway;
     private readonly ISettingsStore _settings;
     private readonly ILocalPostStore _local;
+    private readonly IGitStatusService _gitStatus;
 
     // Latched once we initiate navigation away from this page (open a post, "new", or
     // "settings") and cleared when the page re-appears (RefreshAsync runs from OnAppearing).
@@ -21,6 +22,10 @@ public sealed partial class OpenPostViewModel : ObservableObject
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = string.Empty;
 
+    [ObservableProperty] private RepoSyncState _syncState = RepoSyncState.Unknown;
+    [ObservableProperty] private string _syncStatus = "sync ?";
+    [ObservableProperty] private string _syncDetail = "Local repo sync vs the GitHub remote.";
+
     public ObservableCollection<PostEntry> Entries { get; } = [];
 
     public event EventHandler<OpenedPost>? PostOpened;
@@ -28,18 +33,41 @@ public sealed partial class OpenPostViewModel : ObservableObject
     public event EventHandler? SettingsRequested;
     public event EventHandler? AboutRequested;
 
-    public OpenPostViewModel(IGitHubGateway gateway, ISettingsStore settings, ILocalPostStore local)
+    public OpenPostViewModel(IGitHubGateway gateway, ISettingsStore settings, ILocalPostStore local, IGitStatusService gitStatus)
     {
         _gateway = gateway;
         _settings = settings;
         _local = local;
+        _gitStatus = gitStatus;
     }
+
+    /// <summary>Recomputes the git sync chip for the Local Posts Folder (background fetch when asked).</summary>
+    public async Task RefreshSyncAsync(bool fetch)
+    {
+        try
+        {
+            var status = await _gitStatus.GetStatusAsync(_settings.Current.LocalFolder, fetch);
+            SyncState = status.State;
+            SyncStatus = SyncChip.Label(status);
+            SyncDetail = string.IsNullOrEmpty(status.Detail) ? SyncStatus : status.Detail;
+        }
+        catch
+        {
+            SyncState = RepoSyncState.Unknown;
+            SyncStatus = "sync error";
+            SyncDetail = "Could not read git status.";
+        }
+    }
+
+    [RelayCommand]
+    private Task RefreshSync() => RefreshSyncAsync(fetch: true);
 
     [RelayCommand]
     public async Task RefreshAsync()
     {
         // The page is (re)appearing — re-arm navigation for this visit.
         _navigated = false;
+        _ = RefreshSyncAsync(fetch: true);   // refresh the sync chip alongside the post list
         var s = _settings.Current;
         IsBusy = true;
         Entries.Clear();
