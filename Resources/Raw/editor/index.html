@@ -834,6 +834,9 @@ html, body {
     focus() {
       editor.focus();
     },
+    getText() {
+      return editor.innerText;
+    },
     getDiag() {
       return diagLog.join('\n');
     }
