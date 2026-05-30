@@ -66,6 +66,11 @@ public partial class EditorPage : ContentPage
         vm.AboutRequested += async (_, _) => await Shell.Current.GoToAsync("about");
         vm.PreviewRequested += async (_, _) =>
         {
+#if ANDROID
+            // The JS->host bridge can't live-sync edits, so RawMarkdown is the last seeded text
+            // unless we pull. Without this, opening Preview after typing shows stale content.
+            await SyncEditorTextBeforeSaveAsync();
+#endif
             _previewBox.Put(_vm.RawMarkdown);
             await Shell.Current.GoToAsync("preview");
         };
