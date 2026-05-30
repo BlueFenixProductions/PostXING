@@ -16,17 +16,17 @@ public sealed class FileSystemLocalPostStore : ILocalPostStore
             .ToList();
     }
 
-    public async Task<string?> ReadAsync(string fullPath, CancellationToken ct = default)
+    public async Task<string?> ReadAsync(string id, CancellationToken ct = default)
     {
-        if (!File.Exists(fullPath)) return null;
-        return await File.ReadAllTextAsync(fullPath, ct);
+        if (!File.Exists(id)) return null;
+        return await File.ReadAllTextAsync(id, ct);
     }
 
-    public async Task WriteAsync(string fullPath, string contents, CancellationToken ct = default)
+    public async Task WriteAsync(string id, string contents, CancellationToken ct = default)
     {
-        var dir = Path.GetDirectoryName(fullPath);
+        var dir = Path.GetDirectoryName(id);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-        await File.WriteAllTextAsync(fullPath, contents, ct);
+        await File.WriteAllTextAsync(id, contents, ct);
     }
 
     public async Task<string> CreateAsync(string folder, string relativePath, string contents, CancellationToken ct = default)

@@ -15,8 +15,23 @@
 
             <Label Style="{StaticResource Kicker}" Text="[ local posts folder ]"
                    SemanticProperties.HeadingLevel="Level2" />
+            <!-- Windows: typed path. Hidden on Android because typing a content:// SAF URI is
+                 not a user-facing affordance — the Pick folder button below does it instead. -->
             <Entry Placeholder="C:\path\to\your\posts" Text="{Binding LocalFolder}"
+                   IsVisible="{OnPlatform Default=True, Android=False}"
                    SemanticProperties.Description="Local posts folder" />
+            <!-- Android-only: SAF Open Document Tree returns a persisted content:// URI. The
+                 picked URI is shown read-only beneath the button so the user can see a folder
+                 is bound; the value lives in LocalFolder either way. -->
+            <Button Text="pick folder..." Command="{Binding PickFolderCommand}"
+                    Style="{StaticResource ButtonGhost}"
+                    IsVisible="{OnPlatform Default=False, Android=True}"
+                    HorizontalOptions="Start"
+                    SemanticProperties.Description="Pick a local posts folder" />
+            <Label Style="{StaticResource FieldCaption}" Text="{Binding LocalFolder}"
+                   IsVisible="{OnPlatform Default=False, Android=True}"
+                   FontFamily="HackRegular"
+                   SemanticProperties.Description="Currently selected local posts folder" />
             <Label Style="{StaticResource FieldCaption}"
                    Text="Where you keep your .md files locally. Use your own git client to commit and push." />
 
