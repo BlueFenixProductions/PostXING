@@ -74,6 +74,7 @@
             <HorizontalStackLayout Grid.Column="0" Spacing="16">
                 <Label Style="{StaticResource StatusBarRead}" Text="{Binding StatusMessage}" />
                 <HorizontalStackLayout Spacing="4" VerticalOptions="Center"
+                                       IsVisible="{OnPlatform Default=True, Android=False}"
                                        ToolTipProperties.Text="{Binding SyncDetail}"
                                        SemanticProperties.Description="Git sync status; tap to refresh">
                     <HorizontalStackLayout.GestureRecognizers>
