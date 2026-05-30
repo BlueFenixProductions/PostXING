@@ -27,6 +27,15 @@ public sealed class InMemoryGitHubGateway : IGitHubGateway
     public Task<string?> GetFileContentAsync(string owner, string repo, string branch, string path, CancellationToken ct = default)
         => Task.FromResult(_files.TryGetValue((owner, repo, branch, path), out var c) ? c : null);
 
+    public Task<string?> GetFileShaAsync(string owner, string repo, string branch, string path, CancellationToken ct = default)
+    {
+        // The real GitHub sha is the git blob hash of the content; for the in-memory test
+        // fake, a stable deterministic surrogate is enough — callers only round-trip it.
+        if (!_files.TryGetValue((owner, repo, branch, path), out var c)) return Task.FromResult<string?>(null);
+        var hash = $"{(uint)c.GetHashCode():x8}{(uint)path.GetHashCode():x8}";
+        return Task.FromResult<string?>(hash);
+    }
+
     public Task UpsertFileAsync(string owner, string repo, string branch, string path, string content, string commitMessage, string? existingFileSha, CancellationToken ct = default)
     {
         _files[(owner, repo, branch, path)] = content;

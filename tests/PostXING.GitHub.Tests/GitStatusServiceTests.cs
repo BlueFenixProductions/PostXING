@@ -27,10 +27,16 @@ public sealed class GitCliStatusServiceTests
         string porcelain = "",
         string revList = "0\t0",          // "<behind>\t<ahead>"
         bool upstreamFails = false,
-        Action<IReadOnlyList<string>>? record = null)
+        Action<IReadOnlyList<string>>? record = null,
+        Func<IReadOnlyList<string>, (int exit, string stdout, string stderr)?>? overrideRun = null)
         => (args, ct) =>
         {
             record?.Invoke(args);
+            if (overrideRun is not null)
+            {
+                var custom = overrideRun(args);
+                if (custom is not null) return Task.FromResult<(int, string, string)>(custom.Value);
+            }
             var sub = args.Count > 2 ? args[2] : string.Empty;
             return Task.FromResult<(int, string, string)>(sub switch
             {
@@ -158,5 +164,123 @@ public sealed class GitCliStatusServiceTests
             calls.ShouldNotContain("fetch");
         }
         finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task CommitAsync_runs_add_then_commit_and_returns_success()
+    {
+        var dir = TempRepo();
+        try
+        {
+            var subs = new List<string>();
+            var svc = new GitCliStatusService(FakeGit(record: a => subs.Add(a.Count > 2 ? a[2] : string.Empty)));
+            var result = await svc.CommitAsync(dir, "first draft");
+            result.Success.ShouldBeTrue();
+            // Both subcommands must fire, in order — `add -A` is what stages the untracked drafts.
+            subs.ShouldContain("add");
+            subs.ShouldContain("commit");
+            subs.IndexOf("add").ShouldBeLessThan(subs.IndexOf("commit"));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task CommitAsync_treats_nothing_to_commit_as_success()
+    {
+        var dir = TempRepo();
+        try
+        {
+            // `git commit` exits non-zero when there's nothing staged; the service must not
+            // surface that as a failure or the sync chip flashes red for a no-op.
+            var svc = new GitCliStatusService(FakeGit(overrideRun: a =>
+                a.Count > 2 && a[2] == "commit" ? (1, "nothing to commit, working tree clean", string.Empty) : null));
+            var result = await svc.CommitAsync(dir, "no changes");
+            result.Success.ShouldBeTrue();
+            result.Detail.ShouldContain("nothing to commit");
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task CommitAsync_surfaces_real_failure()
+    {
+        var dir = TempRepo();
+        try
+        {
+            var svc = new GitCliStatusService(FakeGit(overrideRun: a =>
+                a.Count > 2 && a[2] == "commit" ? (1, string.Empty, "fatal: empty ident name") : null));
+            var result = await svc.CommitAsync(dir, "msg");
+            result.Success.ShouldBeFalse();
+            result.Detail.ShouldContain("empty ident");
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task PushAsync_runs_git_push_and_returns_success()
+    {
+        var dir = TempRepo();
+        try
+        {
+            var subs = new List<string>();
+            var svc = new GitCliStatusService(FakeGit(record: a => subs.Add(a.Count > 2 ? a[2] : string.Empty)));
+            (await svc.PushAsync(dir)).Success.ShouldBeTrue();
+            subs.ShouldContain("push");
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task PushAsync_surfaces_failure()
+    {
+        var dir = TempRepo();
+        try
+        {
+            var svc = new GitCliStatusService(FakeGit(overrideRun: a =>
+                a.Count > 2 && a[2] == "push" ? (1, string.Empty, "fatal: Authentication failed") : null));
+            var result = await svc.PushAsync(dir);
+            result.Success.ShouldBeFalse();
+            result.Detail.ShouldContain("Authentication");
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task PullAsync_runs_ff_only_pull_and_returns_success()
+    {
+        var dir = TempRepo();
+        try
+        {
+            var captured = new List<IReadOnlyList<string>>();
+            var svc = new GitCliStatusService(FakeGit(record: a => captured.Add(a)));
+            (await svc.PullAsync(dir)).Success.ShouldBeTrue();
+            // --ff-only is load-bearing: it refuses a silent auto-merge if the local has diverged.
+            captured.ShouldContain(a => a.Count >= 4 && a[2] == "pull" && a.Contains("--ff-only"));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task PullAsync_reports_diverged_history_failure()
+    {
+        var dir = TempRepo();
+        try
+        {
+            var svc = new GitCliStatusService(FakeGit(overrideRun: a =>
+                a.Count > 2 && a[2] == "pull" ? (128, string.Empty, "fatal: Not possible to fast-forward, aborting.") : null));
+            var result = await svc.PullAsync(dir);
+            result.Success.ShouldBeFalse();
+            result.Detail.ShouldContain("fast-forward");
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task Mutations_with_no_folder_are_failure()
+    {
+        var svc = new GitCliStatusService(FakeGit());
+        (await svc.CommitAsync(null, "msg")).Success.ShouldBeFalse();
+        (await svc.PushAsync(null)).Success.ShouldBeFalse();
+        (await svc.PullAsync(null)).Success.ShouldBeFalse();
     }
 }

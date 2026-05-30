@@ -45,6 +45,20 @@ public sealed class GhCliGitHubGateway(ILogger<GhCliGitHubGateway> log, string g
         return Encoding.UTF8.GetString(Convert.FromBase64String(encoded.Replace("\n", string.Empty)));
     }
 
+    public async Task<string?> GetFileShaAsync(string owner, string repo, string branch, string path, CancellationToken ct = default)
+    {
+        var (exit, stdout, stderr) = await RunAsync(
+            ["api", $"repos/{owner}/{repo}/contents/{path}?ref={branch}", "--jq", ".sha"],
+            stdin: null, ct);
+        if (exit != 0)
+        {
+            if (IsNotFound(stderr)) return null;
+            throw GhException($"get file sha {path}", exit, stderr);
+        }
+        var sha = stdout.Trim();
+        return string.IsNullOrEmpty(sha) ? null : sha;
+    }
+
     public async Task UpsertFileAsync(string owner, string repo, string branch, string path, string content, string commitMessage, string? existingFileSha, CancellationToken ct = default)
     {
         var b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(content));

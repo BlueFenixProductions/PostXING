@@ -33,4 +33,45 @@ public partial class OpenPostPage : ContentPage
         if (sender is CollectionView cv)
             cv.SelectedItem = null;
     }
+
+    // Sync chip action sheet — mirrors EditorPage so the Open page can drive the same set of
+    // local-git operations. The chip is Windows-only (hidden on Android via OnPlatform).
+    private async void OnSyncChipTapped(object? sender, TappedEventArgs e)
+    {
+        const string commitPush = "commit & push";
+        const string commitOnly = "commit";
+        const string push = "push";
+        const string pull = "pull";
+        const string refresh = "refresh";
+        var choice = await DisplayActionSheetAsync("git", "cancel", null, commitPush, commitOnly, push, pull, refresh);
+        switch (choice)
+        {
+            case commitPush:
+            {
+                var msg = await PromptCommitMessageAsync();
+                if (msg is null) return;
+                await _vm.CommitAsync(msg);
+                await _vm.PushLocalAsync();
+                break;
+            }
+            case commitOnly:
+            {
+                var msg = await PromptCommitMessageAsync();
+                if (msg is null) return;
+                await _vm.CommitAsync(msg);
+                break;
+            }
+            case push: await _vm.PushLocalAsync(); break;
+            case pull: await _vm.PullLocalAsync(); break;
+            case refresh: await _vm.RefreshSyncAsync(fetch: true); break;
+        }
+    }
+
+    private async Task<string?> PromptCommitMessageAsync()
+    {
+        var msg = await DisplayPromptAsync("commit", "what changed?",
+            accept: "commit", cancel: "cancel",
+            initialValue: "WIP draft", maxLength: 240);
+        return string.IsNullOrWhiteSpace(msg) ? null : msg;
+    }
 }
