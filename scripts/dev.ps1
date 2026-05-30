@@ -18,7 +18,9 @@ if ($Build) {
     $parts = $full.Split('.')
     $display = ($parts[0..2] -join '.')
     $appver = $parts[3]
-    dotnet build -v q -p:Version=$full -p:ApplicationDisplayVersion=$display -p:ApplicationVersion=$appver
+    # Windows-only for the fast dev loop: the App now multi-targets (...;net10.0-android), and a
+    # bare build would compile both heads. Use scripts/android.ps1 (bun android) for the phone.
+    dotnet build -f net10.0-windows10.0.19041.0 -v q -p:Version=$full -p:ApplicationDisplayVersion=$display -p:ApplicationVersion=$appver
     if ($LASTEXITCODE -ne 0) { Write-Host 'Build failed - not launching.'; exit $LASTEXITCODE }
 }
 
