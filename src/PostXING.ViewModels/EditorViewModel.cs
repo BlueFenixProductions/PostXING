@@ -167,9 +167,14 @@ public sealed partial class EditorViewModel : ObservableObject
     [RelayCommand]
     private void Preview() => PreviewRequested?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>Host hook to pull the editor's latest text into RawMarkdown before saving.
+    /// Needed on Android, where the JS-&gt;host bridge can't live-sync edits; no-op if unset.</summary>
+    public Func<Task>? SyncBeforeSaveAsync { get; set; }
+
     [RelayCommand(CanExecute = nameof(IsDirty))]
     private async Task SaveAsync()
     {
+        if (SyncBeforeSaveAsync is not null) await SyncBeforeSaveAsync();
         try
         {
             switch (_handle.Source)

@@ -72,6 +72,11 @@ public partial class EditorPage : ContentPage
         };
         vm.PropertyChanged += OnViewModelPropertyChanged;
 
+#if ANDROID
+        // Android's JS->host bridge can't live-sync edits, so pull the editor text on save.
+        vm.SyncBeforeSaveAsync = SyncEditorTextBeforeSaveAsync;
+#endif
+
         // HybridWebView serves Resources/Raw/editor (HybridRoot) and exposes a raw
         // message channel on both Windows and Android. JS -> host arrives here.
         EditorWebView.RawMessageReceived += OnRawMessageReceived;
@@ -186,4 +191,40 @@ public partial class EditorPage : ContentPage
         });
         return Task.CompletedTask;
     }
+
+#if ANDROID
+    // Pull the editor's current text via EvaluateJavaScriptAsync (which returns at stable times,
+    // unlike during page load) into the ViewModel before saving. Echo push-back is suppressed,
+    // and it times out defensively so Save never blocks if eval hangs.
+    private async Task SyncEditorTextBeforeSaveAsync()
+    {
+        try
+        {
+            var evalTask = MainThread.InvokeOnMainThreadAsync(
+                () => EditorWebView.EvaluateJavaScriptAsync("window.PostXING.getText()"));
+            var done = await Task.WhenAny(evalTask, Task.Delay(2500));
+            if (done != evalTask) { BridgeLog.Write("SyncBeforeSave: getText timed out"); return; }
+
+            var text = DecodeEvalString(evalTask.Result);
+            if (text == _vm.RawMarkdown) return;
+
+            _lastSyncedText = text;
+            _suppressOutgoingPropertyChanged = true;
+            try { _vm.RawMarkdown = text; }
+            finally { _suppressOutgoingPropertyChanged = false; }
+            BridgeLog.Write($"SyncBeforeSave pulled {text.Length} chars");
+        }
+        catch (Exception ex) { BridgeLog.Write($"SyncBeforeSave threw {ex.GetType().Name}: {ex.Message}"); }
+    }
+
+    // EvaluateJavaScriptAsync returns a JS string JSON-escaped (\n, \", maybe outer-quoted);
+    // decode it back to the raw markdown source.
+    private static string DecodeEvalString(string? raw)
+    {
+        if (string.IsNullOrEmpty(raw)) return string.Empty;
+        var json = raw.Length >= 2 && raw[0] == '"' && raw[^1] == '"' ? raw : "\"" + raw + "\"";
+        try { return JsonSerializer.Deserialize<string>(json) ?? raw; }
+        catch { return raw; }
+    }
+#endif
 }
