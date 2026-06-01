@@ -57,6 +57,13 @@
                        SemanticProperties.HeadingLevel="Level2" />
                 <Entry Placeholder="develop" Text="{Binding DevelopBranch}"
                        SemanticProperties.Description="GitHub integration branch" />
+
+                <Label Style="{StaticResource Kicker}" Text="[ content folder (optional) ]"
+                       SemanticProperties.HeadingLevel="Level2" />
+                <Entry Placeholder="e.g. blog  (empty = repo root)" Text="{Binding ContentRoot}"
+                       SemanticProperties.Description="Repo subfolder that holds posts/ and drafts/" />
+                <Label Style="{StaticResource FieldCaption}"
+                       Text="If your posts/ and drafts/ live under a subfolder (e.g. blog/posts/), put that subfolder here." />
             </VerticalStackLayout>
 
             <BoxView Style="{StaticResource Hairline}" />

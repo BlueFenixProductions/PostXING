@@ -115,8 +115,8 @@ public sealed partial class OpenPostViewModel : ObservableObject
             {
                 try
                 {
-                    var drafts = await _gateway.ListMarkdownFilesAsync(s.Owner!, s.Repo!, s.DevelopBranch, "drafts/");
-                    var posts = await _gateway.ListMarkdownFilesAsync(s.Owner!, s.Repo!, s.DevelopBranch, "posts/");
+                    var drafts = await _gateway.ListMarkdownFilesAsync(s.Owner!, s.Repo!, s.DevelopBranch, s.DraftsPrefix);
+                    var posts = await _gateway.ListMarkdownFilesAsync(s.Owner!, s.Repo!, s.DevelopBranch, s.PostsPrefix);
                     foreach (var f in drafts)
                         found.Add((FileNameDate(f), new PostEntry(PostSource.GitHub, f, f, "github draft")));
                     foreach (var f in posts)

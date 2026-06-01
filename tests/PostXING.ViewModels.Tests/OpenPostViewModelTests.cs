@@ -135,6 +135,21 @@ public sealed class OpenPostViewModelTests
     }
 
     [Fact]
+    public async Task GitHub_listing_uses_the_configured_content_root_prefix()
+    {
+        var (vm, gateway, settings, _) = CreateVm();
+        // The user's repo nests the convention under blog/ (blog/posts/, blog/drafts/).
+        settings.Current.Returns(AppSettings.Default with { Owner = "o", Repo = "r", ContentRoot = "blog" });
+        gateway.ListMarkdownFilesAsync("o", "r", "develop", "blog/drafts/").Returns(GitHubDraftFiles);
+        gateway.ListMarkdownFilesAsync("o", "r", "develop", "blog/posts/").Returns(GitHubPostFiles);
+
+        await vm.RefreshAsync();
+
+        await gateway.Received().ListMarkdownFilesAsync("o", "r", "develop", "blog/drafts/");
+        await gateway.Received().ListMarkdownFilesAsync("o", "r", "develop", "blog/posts/");
+    }
+
+    [Fact]
     public void About_button_navigates_only_once_per_visit()
     {
         var (vm, _, _, _) = CreateVm();

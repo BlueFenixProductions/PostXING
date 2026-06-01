@@ -93,7 +93,7 @@ Central package versions in `Directory.Packages.props`. Shared build properties 
 
 ## Flat folder convention
 
-Posts and drafts live in two flat top-level folders inside the user's local folder or the GitHub repo. These names are not configurable; don't introduce `DraftsFolder` / `PostsFolder` settings or year/month subdirectories.
+Posts and drafts live in two flat folders inside the user's local folder or the GitHub repo. The `drafts/`/`posts/` folder names and the `{date}-{slug}` file naming are **not** configurable — but as of 2026-06-01 an optional `AppSettings.ContentRoot` may **nest** them under a subfolder (e.g. `ContentRoot="blog"` → lists `blog/drafts/` + `blog/posts/`, for an existing VitePress blog that keeps the convention under `blog/`). It's a single base-path prefix, threaded through `AppSettings.PostsPrefix`/`DraftsPrefix`; don't add per-folder `DraftsFolder`/`PostsFolder` settings or year/month subdirectories.
 
 - `drafts/{slug}.md` — work-in-progress. For local: written by `SaveAsync` when the editor's `PostHandle.Source` is `New`. For GitHub: written by `GitHubPublishService.SaveDraftAsync` directly to the integration branch (no PR).
 - `posts/{yyyy-MM-dd}-{slug}.md` — published. The date is the publish date computed at publish time (not the post's `CreatedAt`), the slug is from `FrontMatter.Title` at publish time.

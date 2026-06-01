@@ -15,6 +15,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _owner = string.Empty;
     [ObservableProperty] private string _repo = string.Empty;
     [ObservableProperty] private string _developBranch = "develop";
+    [ObservableProperty] private string _contentRoot = string.Empty;
     [ObservableProperty] private string _authorName = string.Empty;
     [ObservableProperty] private string _ghAuthDetail = string.Empty;
     [ObservableProperty] private bool _isAuthenticated;
@@ -45,6 +46,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         Owner = s.Owner ?? string.Empty;
         Repo = s.Repo ?? string.Empty;
         DevelopBranch = s.DevelopBranch;
+        ContentRoot = s.ContentRoot ?? string.Empty;
         AuthorName = s.AuthorName ?? string.Empty;
         _ = CheckAuthAsync();
     }
@@ -114,7 +116,8 @@ public sealed partial class SettingsViewModel : ObservableObject
             Repo: string.IsNullOrWhiteSpace(Repo) ? null : Repo.Trim(),
             DevelopBranch: string.IsNullOrWhiteSpace(DevelopBranch) ? "develop" : DevelopBranch.Trim(),
             AuthorName: string.IsNullOrWhiteSpace(AuthorName) ? null : AuthorName.Trim(),
-            LocalFolder: string.IsNullOrWhiteSpace(LocalFolder) ? null : LocalFolder.Trim());
+            LocalFolder: string.IsNullOrWhiteSpace(LocalFolder) ? null : LocalFolder.Trim(),
+            ContentRoot: string.IsNullOrWhiteSpace(ContentRoot) ? null : ContentRoot.Trim());
         await _store.SaveAsync(s);
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
