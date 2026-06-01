@@ -12,7 +12,7 @@ This repository previously held a recovered decompilation of PostXING v2 from 20
 
 - **Windows-first, plus Android.** The App multi-targets `net10.0-windows10.0.19041.0;net10.0-android` — the original Windows-only rule was lifted on 2026-05-30 when the Android port landed. Still **no** macCatalyst/iOS/Linux. Android divergences go through `OnPlatform` (XAML) / `#if ANDROID` (C#) and must leave Windows behavior unchanged; don't add other-platform conditionals "for someday." See **Android notes**.
 - **Local files are first-class. `gh` CLI is optional/advanced.** The default user flow is: pick a Local Posts Folder in Settings, edit, save to disk, commit/push with whatever git client they prefer (CLI, GitHub Desktop, VSCodium, etc.). The in-app `gh` terminal (route `terminal`) and the gateway-backed Publish flow are present for power users, but the app must remain useful without `gh` installed.
-- **GitHub integration: `gh` CLI shell-out, not Octokit.** See `src/PostXING.GitHub/GhCliGitHubGateway.cs`. The `gh` binary is the runtime dependency for the GitHub path; the user runs `gh auth login` once (or pastes a PAT via the in-app terminal) and the app inherits the credential. No PAT storage in-app, no `Octokit` package reference.
+- **GitHub integration: `gh` CLI on desktop, in-process HTTP on Android — never Octokit.** Both implement the same `IGitHubGateway`. Desktop: `src/PostXING.GitHub/GhCliGitHubGateway.cs` shells out to `gh`; the user runs `gh auth login` once (or pastes a PAT via the in-app terminal) and the app inherits the credential — no PAT storage on desktop. Android can't shell out, so `HttpGitHubGateway` calls the GitHub REST API directly over `HttpClient`, authenticating with a PAT kept in `SecureStorage` (`IGitHubTokenStore`). No `Octokit` package reference on either head.
 - **YAGNI.** Don't add abstractions, alternative backends, future-platform hooks, or "we might want X later" scaffolding. If the user wants a new capability, they'll ask.
 
 ## Run / build / test from the repo root
@@ -106,20 +106,20 @@ Posts and drafts live in two flat top-level folders inside the user's local fold
 - **`OpenPostPage` is the Shell root (the home screen).** The app launches into the Open list, not a blank editor. `AppShell.xaml` declares the single `ShellContent` as `OpenPostPage` (route `open`); `EditorPage` is a pushed route (`Routing.RegisterRoute("editor", …)`). Selecting a post or tapping `new` on the home screen pushes the editor on top; the editor's `open` is `GoToAsync("..")`, which pops back home. Don't restore `EditorPage` as the root — that's the old "launch into a new post" default that was deliberately replaced.
 - **No persistent chrome.** The only navigation surface is a thin status bar at the bottom of each page. On `EditorPage`: New / Open / Settings / Save / Publish (Save and Publish hidden until `IsDirty`). On the `OpenPostPage` home screen: `new` (→ blank editor + title prompt) / `settings`.
 - **New posts go through a full-window title-prompt overlay** driven by `EditorViewModel.ShowTitlePrompt`. The editor starts empty; the prompt seeds the YAML frontmatter (title, author, date, draft, tags, description) and an H1 heading from the title. Don't auto-seed frontmatter without going through the prompt — the blank-canvas cure depends on it.
-- **The gh terminal page** (`Views/GhTerminalPage.xaml`, route `terminal`) is intentionally dark + monospace + green-on-black. It accepts a `gh` subcommand and an optional stdin block (used for `auth login --with-token`). It's the canonical in-app PAT entry point; don't add a Settings PAT field.
+- **The gh terminal page** (`Views/GhTerminalPage.xaml`, route `terminal`) is intentionally dark + monospace + green-on-black. It accepts a `gh` subcommand and an optional stdin block (used for `auth login --with-token`). It's the canonical in-app PAT entry point **on desktop**; don't add a Settings PAT field there. Android is the exception: with no `gh` terminal, Settings has a `[ github account ]` section that pastes a token straight into `SecureStorage` (see **Android notes**).
 - **Inter-page post handoff** uses `IPendingPostBox` (singleton). On select, `OpenPostViewModel` fires `PostOpened` (the page calls `box.Put`) then `EditorRequested` (the page calls `GoToAsync("editor")`); `EditorPage.OnAppearing` takes the post. The `new` path fires `EditorRequested` with an empty box, so the editor falls through to its title-prompt overlay. Don't refactor to Shell query strings or `MessagingCenter` — the box is simple and untyped-route-friendly.
 
 ## Android notes
 
 The Android head landed 2026-05-30 (`net10.0-android`). Key divergences from Windows:
 
-- **UI chrome.** The desktop bottom status bar and `MenuBar` don't fit a phone. On Android `Shell.NavBarIsVisible` is true and page actions live in the Material top-app-bar **overflow menu** (`ToolbarItems`, `Order=Secondary`); the bottom bar is hidden via `OnPlatform`, and the title-prompt overlay is mobile-sized the same way. The GitHub/publish/sync/`gh`-terminal UI is hidden on Android (no `gh`/`git` CLI there); those services degrade gracefully (e.g. `GitCliStatusService` catches the missing-binary exception).
+- **UI chrome.** The desktop bottom status bar and `MenuBar` don't fit a phone. On Android `Shell.NavBarIsVisible` is true and page actions live in the Material top-app-bar **overflow menu** (`ToolbarItems`, `Order=Secondary`); the bottom bar is hidden via `OnPlatform`, and the title-prompt overlay is mobile-sized the same way. The in-app GitHub path **is live** on Android (via `HttpGitHubGateway`): the GitHub repo/target-branch config and a PAT-based `[ github account ]` section show in Settings, and Save (commit) / Publish (PR) / Merge are in the editor overflow. Only the genuinely CLI-bound surfaces stay hidden there — the `gh` terminal and the local-clone sync chip (no `gh`/`git` binary); `GitCliStatusService` still degrades gracefully (catches the missing-binary exception).
 - **Editor bridge is the sharp edge.** MAUI's `HybridWebView` renders `Resources/Raw/editor/index.html`, but its **JS↔host raw-message bridge does not work on Android** in MAUI 10.0.20: `window.HybridWebView` is never injected, so `SendRawMessage`/`RawMessageReceived` never fire. And `EvaluateJavaScriptAsync`'s awaited Task **hangs during page load** (its *return value* works once the page is stable). So `EditorPage` (`#if ANDROID`):
   - **host→JS:** fires `EvaluateJavaScriptAsync("…setTextB64(b64)…")` **without awaiting** (the JS still runs); seeds on a short retry loop, no readiness handshake. Base64 survives MAUI's URL-encode round-trip.
   - **JS→host (edit-sync):** on Save, `EditorViewModel.SyncBeforeSaveAsync` → `EditorPage` calls `getText()` via `EvaluateJavaScriptAsync` (return works post-load) and JSON-decodes the result into `RawMarkdown`.
   - Don't try to use the HybridWebView raw-message bridge here — use those `EvaluateJavaScriptAsync` patterns. `BridgeLog` mirrors to logcat tag `PXBRIDGE` (`adb logcat -s PXBRIDGE`).
 - **Deploy.** `bun android` (`scripts/android.ps1`) builds a **clean embedded** APK (`-p:EmbedAssembliesIntoApk=true`) and `-t:Run`s it. Stale MAUI fast-deploy state shows a **blank PhoenixBlue screen**; if you hit that, `adb uninstall net.bluefenix.postxing` then redeploy. adb ships with the Android SDK (`…\Android\android-sdk\platform-tools\adb.exe`), not on PATH.
-- **Known gap: no save-to-disk on Android yet.** There's no scoped-storage (SAF) layer, so the Local Posts Folder can't be picked/written on a phone — the editor reads/writes correctly in memory but persistence is a TODO. `FileSystemSettingsStore` uses `FileSystem.AppDataDirectory` on Android (app-private) for settings only.
+- **Storage + GitHub are live on Android.** SAF scoped storage (`SafFolderPicker` + `SafLocalPostStore`, persisted tree URI) backs the Local Posts Folder, and the in-process `HttpGitHubGateway` + a SecureStorage PAT give the phone the full open / save-as-commit / publish-PR / merge loop against the blog repo. `FileSystemSettingsStore` uses `FileSystem.AppDataDirectory` on Android for settings.
 
 ## Branch model
 
@@ -142,7 +142,7 @@ The app never pushes directly to `stage` or `main`.
 
 ## Hard rules
 
-- **Windows + Android; `gh` CLI only.** The Windows-only rule was lifted for **Android** on 2026-05-30; don't add macCatalyst/iOS/Linux. Still no Octokit, LibGit2Sharp, or GitLab adapters. Android has no `gh`/`git` CLI, so the GitHub/publish/sync/terminal UI is hidden there (`OnPlatform`) and those paths degrade to the local-files workflow. If the platform set changes again, the user will say so.
+- **Windows + Android.** The Windows-only rule was lifted for **Android** on 2026-05-30; don't add macCatalyst/iOS/Linux. **No Octokit, LibGit2Sharp, or GitLab adapters** — but note the deliberate Android carve-out: since Android can't shell out to `gh`/`git`, its GitHub path is an **in-process `HttpClient`** implementation of `IGitHubGateway` (`HttpGitHubGateway`) — neither a shell-out nor Octokit. Only the `gh` terminal and the local-clone sync chip stay hidden on Android (no `gh`/`git` binary). If the platform set changes again, the user will say so.
 - **Don't add speculative abstractions or "future maybe" code paths.** YAGNI is enforced; left-in dead code is worse than no code.
 - **Never propose uninstalling any Visual Studio install, Build Tools install, or VS-installer-managed component.**
 - **`.ps1` files written via the Write tool must be ASCII-only.** Windows PowerShell 5.1 misdecodes BOM-less UTF-8; if a script needs a non-ASCII character, use a `[char]` escape.
@@ -151,11 +151,12 @@ The app never pushes directly to `stage` or `main`.
 - **Don't migrate `[ObservableProperty]` fields to partial properties.** `CommunityToolkit.Mvvm` is pinned at 8.4, which emits `MVVMTK0045` advising the partial-property syntax for WinRT AOT compat — but 8.4's source generator does *not* synthesize the partial property bodies, so the migration breaks the build. The MVVMTK0045 suppression in `.editorconfig` is deliberate. Revisit only after bumping the package to ≥ 8.5.
 - **TDD discipline for new feature work** — red → green → refactor. Tests live in `tests/`. Frameworks: xUnit 2.9.x, Shouldly (not FluentAssertions — Xceed Community License), NSubstitute, coverlet.
 
-## Known stubs (intentional, don't "fix")
+## Known gaps
 
-- `EditorViewModel.SaveCommand` for `PostSource.GitHub` is a stub with a hint to use the gh terminal. The local-file path is real; the GitHub commit path is deliberately deferred until the UX is settled.
-- `EditorViewModel.PublishCommand` raises `PublishConfirmationRequested` but no page subscribes. No PR is opened from the UI yet. `GitHubPublishService.PublishAsync` is fully implemented and tested at the service layer — what's missing is the publish modal, not the backend.
-- `GitHubPublishService.GetFileShaAsync` returns `null` unconditionally with a `CA1822` suppression. Adding a real sha lookup is gated on the GitHub-save UI being wired.
+The GitHub **Save (commit)**, **Publish (open PR)**, and **Merge** paths are now wired and live on both heads — Android via `HttpGitHubGateway`, desktop via `gh`. This supersedes the former stubs documented here (the `SaveCommand` GitHub branch, the unsubscribed `PublishConfirmationRequested` modal, and `GetFileShaAsync` returning null). Remaining gaps:
+
+- **Device-flow auth isn't built.** Android auth is PAT-paste only (Settings → `[ github account ]`), pending a registered Blue Fenix GitHub OAuth App `client_id`.
+- **Publish leaves the source draft in place.** When `posts/{yyyy-MM-dd}-{slug}.md` is published, the originating `drafts/{slug}.md` isn't deleted — `IGitHubGateway` has no delete-file op yet.
 
 ## License notes on excluded packages
 
@@ -164,7 +165,7 @@ Considered and rejected:
 - `MediatR` >= 12.4 — paid for commercial use → plain DI handlers
 - `AutoMapper` >= 14 — paid for commercial use → hand-write mappings
 - `Moq` — SponsorLink concern → `NSubstitute`
-- `Octokit` — rejected on scope grounds, not licensing. The chosen GitHub backend is the `gh` CLI.
+- `Octokit` — rejected on scope grounds, not licensing. The GitHub backend is the `gh` CLI on desktop and a hand-rolled `HttpClient` gateway (`HttpGitHubGateway`) on Android — still no `Octokit` reference.
 
 ## Pickup
 
