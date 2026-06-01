@@ -55,8 +55,8 @@
 
                 <BoxView Style="{StaticResource Hairline}" />
 
-                <!-- Publisher -->
-                <Label Style="{StaticResource Kicker}" Text="[ publisher ]"
+                <!-- Producer -->
+                <Label Style="{StaticResource Kicker}" Text="[ producer ]"
                        SemanticProperties.HeadingLevel="Level2" />
                 <Label FontFamily="HackRegular" FontSize="13"
                        TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"

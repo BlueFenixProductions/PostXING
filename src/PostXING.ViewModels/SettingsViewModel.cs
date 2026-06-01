@@ -24,6 +24,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     // a token authenticates so the secret doesn't linger in a bound property.
     [ObservableProperty] private string _tokenInput = string.Empty;
 
+    // Show/hide toggle for the PAT field so the user can verify what they pasted. Masked by default.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MaskToken))]
+    private bool _showToken;
+
+    public bool MaskToken => !ShowToken;
+
     public event EventHandler? CloseRequested;
     public event EventHandler? OpenTerminalRequested;
 
@@ -70,11 +77,15 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         await _tokens.SetTokenAsync(token);
         await CheckAuthAsync();            // reads the just-stored token back through the gateway
-        if (IsAuthenticated)
-            TokenInput = string.Empty;     // don't keep the secret in the bound field
-        else
-            await _tokens.ClearAsync();    // reject a token that didn't authenticate
+        // Clear the field only on success (don't leave the secret bound). On failure keep BOTH the
+        // stored token and the field text: a transient check failure must not wipe a token the user
+        // pasted, and keeping the field lets them reveal/fix it. Disconnect clears the token.
+        if (IsAuthenticated) TokenInput = string.Empty;
     }
+
+    /// <summary>Reveal/hide the pasted token so the user can verify it.</summary>
+    [RelayCommand]
+    private void ToggleTokenVisibility() => ShowToken = !ShowToken;
 
     /// <summary>Forget the stored token and re-evaluate auth state (sign out).</summary>
     [RelayCommand]

@@ -41,16 +41,31 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
-    public async Task PasteToken_with_invalid_token_is_not_persisted()
+    public async Task PasteToken_that_fails_keeps_the_token_and_field_for_retry()
     {
         var (vm, gateway, tokens) = CreateVm();
         gateway.CheckAuthAsync(Arg.Any<CancellationToken>()).Returns(new GhAuthStatus(false, null, "Bad credentials"));
-        vm.TokenInput = "ghp_bad";
+        vm.TokenInput = "ghp_maybe_transient";
 
         await vm.PasteTokenCommand.ExecuteAsync(null);
 
-        (await tokens.GetTokenAsync()).ShouldBeNull();   // rolled back, not stored
+        // A failed check must NOT wipe the token - a transient failure shouldn't lose a valid PAT;
+        // only Disconnect clears it. The field stays populated so the user can reveal/fix it.
+        (await tokens.GetTokenAsync()).ShouldBe("ghp_maybe_transient");
         vm.IsAuthenticated.ShouldBeFalse();
+        vm.TokenInput.ShouldBe("ghp_maybe_transient");
+    }
+
+    [Fact]
+    public void ToggleTokenVisibility_flips_masking()
+    {
+        var (vm, _, _) = CreateVm();
+        vm.MaskToken.ShouldBeTrue();    // masked by default
+
+        vm.ToggleTokenVisibilityCommand.Execute(null);
+
+        vm.ShowToken.ShouldBeTrue();
+        vm.MaskToken.ShouldBeFalse();
     }
 
     [Fact]
