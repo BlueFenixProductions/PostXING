@@ -35,9 +35,10 @@
             <Label Style="{StaticResource FieldCaption}"
                    Text="Where you keep your .md files locally. Use your own git client to commit and push." />
 
-            <!-- GitHub repo / integration-branch config is gh-CLI/desktop-only; there is no gh on
-                 Android, so this section is hidden there (the local-folder workflow stays). -->
-            <VerticalStackLayout Spacing="16" IsVisible="{OnPlatform Default=True, Android=False}">
+            <!-- GitHub repo + target-branch config. Drives the desktop gh path AND the Android
+                 in-process HTTP gateway, so it's shown on every platform. The branch is the one
+                 the app commits/publishes/merges to in the user's blog repo. -->
+            <VerticalStackLayout Spacing="16">
                 <BoxView Style="{StaticResource Hairline}" />
 
                 <Label Style="{StaticResource Kicker}" Text="[ github repository (optional) ]"
@@ -82,6 +83,30 @@
                 </HorizontalStackLayout>
                 <Label Style="{StaticResource FieldCaption}"
                        Text="The gh terminal lets you run gh CLI commands without leaving the app. You don't need gh installed if you only use the local folder workflow above." />
+            </VerticalStackLayout>
+
+            <!-- Android: no gh CLI to inherit a credential from, so the user supplies a GitHub
+                 token directly. Hidden on Windows (which uses the gh terminal section above). -->
+            <VerticalStackLayout Spacing="16" IsVisible="{OnPlatform Default=False, Android=True}">
+                <BoxView Style="{StaticResource Hairline}" />
+
+                <Label Style="{StaticResource Kicker}" Text="[ github account ]"
+                       SemanticProperties.HeadingLevel="Level2" />
+                <Label Style="{StaticResource FieldCaption}" Text="{Binding GhAuthDetail}" FontFamily="HackRegular"
+                       SemanticProperties.Description="GitHub authentication status" />
+                <Entry Placeholder="Paste a GitHub token (ghp_...)" Text="{Binding TokenInput}"
+                       IsPassword="True" FontFamily="HackRegular"
+                       SemanticProperties.Description="GitHub personal access token" />
+                <HorizontalStackLayout Spacing="8">
+                    <Button Text="connect" Command="{Binding PasteTokenCommand}"
+                            Style="{StaticResource ButtonGhost}"
+                            SemanticProperties.Description="Connect with the pasted token" />
+                    <Button Text="disconnect" Command="{Binding DisconnectCommand}"
+                            Style="{StaticResource ButtonGhost}"
+                            SemanticProperties.Description="Forget the stored token" />
+                </HorizontalStackLayout>
+                <Label Style="{StaticResource FieldCaption}"
+                       Text="Use a fine-grained token with Contents and Pull requests read/write on your blog repo. It's stored in this device's secure keystore, never in the repo." />
             </VerticalStackLayout>
 
             <BoxView Style="{StaticResource Hairline}" />

@@ -9,6 +9,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly ISettingsStore _store;
     private readonly IGitHubGateway _gateway;
     private readonly IFolderPicker _folderPicker;
+    private readonly IGitHubTokenStore _tokens;
 
     [ObservableProperty] private string _localFolder = string.Empty;
     [ObservableProperty] private string _owner = string.Empty;
@@ -19,14 +20,19 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _isAuthenticated;
     [ObservableProperty] private bool _isBusy;
 
+    // The PAT paste box (Android, where there's no gh to inherit a credential from). Cleared once
+    // a token authenticates so the secret doesn't linger in a bound property.
+    [ObservableProperty] private string _tokenInput = string.Empty;
+
     public event EventHandler? CloseRequested;
     public event EventHandler? OpenTerminalRequested;
 
-    public SettingsViewModel(ISettingsStore store, IGitHubGateway gateway, IFolderPicker folderPicker)
+    public SettingsViewModel(ISettingsStore store, IGitHubGateway gateway, IFolderPicker folderPicker, IGitHubTokenStore tokens)
     {
         _store = store;
         _gateway = gateway;
         _folderPicker = folderPicker;
+        _tokens = tokens;
         var s = store.Current;
         LocalFolder = s.LocalFolder ?? string.Empty;
         Owner = s.Owner ?? string.Empty;
@@ -47,6 +53,36 @@ public sealed partial class SettingsViewModel : ObservableObject
             GhAuthDetail = status.Detail;
         }
         finally { IsBusy = false; }
+    }
+
+    /// <summary>Persist a pasted personal access token, then validate it via the gateway. A token
+    /// that doesn't authenticate is rolled back rather than left in the store. (Android: the gh
+    /// CLI isn't available there, so this is how the user supplies a credential.)</summary>
+    [RelayCommand]
+    private async Task PasteTokenAsync()
+    {
+        var token = TokenInput?.Trim();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            GhAuthDetail = "Paste a personal access token first.";
+            return;
+        }
+
+        await _tokens.SetTokenAsync(token);
+        await CheckAuthAsync();            // reads the just-stored token back through the gateway
+        if (IsAuthenticated)
+            TokenInput = string.Empty;     // don't keep the secret in the bound field
+        else
+            await _tokens.ClearAsync();    // reject a token that didn't authenticate
+    }
+
+    /// <summary>Forget the stored token and re-evaluate auth state (sign out).</summary>
+    [RelayCommand]
+    private async Task DisconnectAsync()
+    {
+        await _tokens.ClearAsync();
+        TokenInput = string.Empty;
+        await CheckAuthAsync();
     }
 
     [RelayCommand]

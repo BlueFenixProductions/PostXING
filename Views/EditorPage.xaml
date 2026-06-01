@@ -34,6 +34,11 @@
                     <KeyboardAccelerator Modifiers="Ctrl,Shift" Key="P" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
+            <MenuFlyoutItem Text="merge" Command="{Binding MergeCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Ctrl,Shift" Key="M" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
             <MenuFlyoutSeparator />
             <MenuFlyoutItem Text="settings" Command="{Binding SettingsCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
@@ -60,9 +65,10 @@
         <ToolbarItem Text="Open post" Command="{Binding OpenPostCommand}" Order="Secondary" Priority="1" />
         <ToolbarItem Text="Save" Command="{Binding SaveCommand}" Order="Secondary" Priority="2" />
         <ToolbarItem Text="Publish" Command="{Binding PublishCommand}" Order="Secondary" Priority="3" />
-        <ToolbarItem Text="Preview" Command="{Binding PreviewCommand}" Order="Secondary" Priority="4" />
-        <ToolbarItem Text="Settings" Command="{Binding SettingsCommand}" Order="Secondary" Priority="5" />
-        <ToolbarItem Text="About" Command="{Binding AboutCommand}" Order="Secondary" Priority="6" />
+        <ToolbarItem Text="Merge" Command="{Binding MergeCommand}" Order="Secondary" Priority="4" />
+        <ToolbarItem Text="Preview" Command="{Binding PreviewCommand}" Order="Secondary" Priority="5" />
+        <ToolbarItem Text="Settings" Command="{Binding SettingsCommand}" Order="Secondary" Priority="6" />
+        <ToolbarItem Text="About" Command="{Binding AboutCommand}" Order="Secondary" Priority="7" />
     </ContentPage.ToolbarItems>
 
     <ContentPage.Resources>

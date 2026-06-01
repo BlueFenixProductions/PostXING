@@ -76,18 +76,9 @@ public partial class EditorPage : ContentPage
         };
         vm.PropertyChanged += OnViewModelPropertyChanged;
 
-#if WINDOWS
-        // GH publish is gh-CLI-only — only ever fired on Windows (the Publish toolbar item is
-        // removed below on Android, the bottom-bar Publish button is hidden via OnPlatform).
-        vm.PublishConfirmationRequested += OnPublishConfirmationRequestedAsync;
-#endif
-
 #if ANDROID
         // Android's JS->host bridge can't live-sync edits, so pull the editor text on save.
         vm.SyncBeforeSaveAsync = SyncEditorTextBeforeSaveAsync;
-        // Publish shells out to `gh`/`git`, neither present on Android — drop the toolbar entry.
-        var publishItem = ToolbarItems.FirstOrDefault(t => t.Text == "Publish");
-        if (publishItem is not null) ToolbarItems.Remove(publishItem);
 #endif
 
         // HybridWebView serves Resources/Raw/editor (HybridRoot) and exposes a raw
@@ -203,22 +194,6 @@ public partial class EditorPage : ContentPage
         });
         return Task.CompletedTask;
     }
-
-#if WINDOWS
-    // Confirm-publish modal. Action sheet keeps to the project's minimum-chrome aesthetic and
-    // gives the user a clear "open PR only" vs "open PR + auto-merge on green CI" choice plus
-    // a cancel. After the choice, ConfirmPublishAsync runs the publish flow and surfaces
-    // PublishState via SaveStatus.
-    private async void OnPublishConfirmationRequestedAsync(object? sender, EventArgs e)
-    {
-        var title = string.IsNullOrWhiteSpace(_vm.FrontMatter.Title) ? "this post" : $"\"{_vm.FrontMatter.Title}\"";
-        const string openOnly = "open PR only";
-        const string autoMerge = "open PR + auto-merge on green CI";
-        var choice = await DisplayActionSheetAsync($"Publish {title}?", "cancel", null, openOnly, autoMerge);
-        if (string.IsNullOrEmpty(choice) || choice == "cancel") return;
-        await _vm.ConfirmPublishAsync(autoMerge: choice == autoMerge);
-    }
-#endif
 
     // Sync chip action sheet — commit / push / pull / refresh. The chip is Windows-only
     // (the bottom bar is hidden on Android via OnPlatform), so this never fires on Android
