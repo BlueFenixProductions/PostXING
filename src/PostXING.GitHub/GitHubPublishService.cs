@@ -26,7 +26,7 @@ public sealed class GitHubPublishService(IGitHubGateway gateway, TimeProvider? c
         await gateway.CreateBranchAsync(site.Owner, site.Repo, branchName, baseSha, ct);
         state = state.WithBranch(branchName);
 
-        var postPath = $"posts/{publishDate:yyyy-MM-dd}-{post.Slug.Value}.md";
+        var postPath = $"{site.PostsPrefix}{publishDate:yyyy-MM-dd}-{post.Slug.Value}.md";
         var commitMessage = $"post: {post.FrontMatter.Title} ({post.Slug.Value})";
         await gateway.UpsertFileAsync(site.Owner, site.Repo, branchName, postPath, renderedDocument, commitMessage, null, ct);
 
@@ -60,7 +60,7 @@ public sealed class GitHubPublishService(IGitHubGateway gateway, TimeProvider? c
         ArgumentNullException.ThrowIfNull(site);
         ArgumentNullException.ThrowIfNull(renderedDocument);
 
-        var path = $"drafts/{post.Slug.Value}.md";
+        var path = $"{site.DraftsPrefix}{post.Slug.Value}.md";
         var message = $"draft: {post.FrontMatter.Title} ({post.Slug.Value})";
         return UpsertDirectAsync(site, path, renderedDocument, message, ct);
     }

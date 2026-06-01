@@ -278,7 +278,7 @@ public sealed partial class EditorViewModel : ObservableObject
         var today = DateOnly.FromDateTime(_clock.GetUtcNow().UtcDateTime);
         var published = FrontMatterEditor.WithDraft(RawMarkdown, draft: false);
         var post = new Post(slug, FrontMatter, published, today);
-        var site = SiteConfig.For(s.Owner!, s.Repo!) with { DevelopBranch = s.DevelopBranch };
+        var site = SiteConfig.For(s.Owner!, s.Repo!) with { DevelopBranch = s.DevelopBranch, ContentRoot = s.ContentRoot };
 
         SaveStatus = "Publishing...";
         try
