@@ -41,3 +41,4 @@ Thumbs.db
 .agents/
 .claude/skills/
 .impeccable/
+.claude/settings.local.json

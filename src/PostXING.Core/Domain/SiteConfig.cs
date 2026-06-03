@@ -8,6 +8,16 @@ public sealed record SiteConfig
     public string StageBranch { get; init; }
     public string MainBranch { get; init; }
 
+    /// <summary>Optional repo subfolder the drafts/ + posts/ trees are nested under (e.g. "blog");
+    /// null/empty = repo root. Set via <c>with</c>, not the constructor.</summary>
+    public string? ContentRoot { get; init; }
+
+    public string PostsPrefix => Prefix("posts/");
+    public string DraftsPrefix => Prefix("drafts/");
+
+    private string Prefix(string folder) =>
+        string.IsNullOrWhiteSpace(ContentRoot) ? folder : $"{ContentRoot.Trim().Trim('/')}/{folder}";
+
     public SiteConfig(
         string owner,
         string repo,
