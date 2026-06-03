@@ -5,7 +5,13 @@ namespace PostXING.App.Services;
 
 public sealed class FileSystemSettingsStore : ISettingsStore
 {
-    private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
+    // Shared for load AND save so the enum theme writes/reads as a readable name ("Dark") rather
+    // than an int, and a future enum reorder can't corrupt existing files.
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+    };
 
     private readonly string _path;
     private AppSettings _current = AppSettings.Default;
@@ -33,7 +39,7 @@ public sealed class FileSystemSettingsStore : ISettingsStore
         try
         {
             await using var fs = File.OpenRead(_path);
-            var loaded = await JsonSerializer.DeserializeAsync<AppSettings>(fs, cancellationToken: ct);
+            var loaded = await JsonSerializer.DeserializeAsync<AppSettings>(fs, JsonOptions, ct);
             if (loaded is not null)
             {
                 _current = loaded;
@@ -50,7 +56,7 @@ public sealed class FileSystemSettingsStore : ISettingsStore
     {
         _current = settings;
         await using var fs = File.Create(_path);
-        await JsonSerializer.SerializeAsync(fs, settings, WriteOptions, ct);
+        await JsonSerializer.SerializeAsync(fs, settings, JsonOptions, ct);
         Changed?.Invoke(this, EventArgs.Empty);
     }
 }

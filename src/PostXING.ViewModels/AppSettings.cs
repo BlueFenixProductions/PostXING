@@ -6,7 +6,8 @@ public sealed record AppSettings(
     string DevelopBranch,
     string? AuthorName,
     string? LocalFolder,
-    string? ContentRoot = null)
+    string? ContentRoot = null,
+    ThemeChoice Theme = ThemeChoice.Dark)
 {
     public static AppSettings Default { get; } = new(
         Owner: null,
@@ -14,7 +15,8 @@ public sealed record AppSettings(
         DevelopBranch: "develop",
         AuthorName: null,
         LocalFolder: null,
-        ContentRoot: null);
+        ContentRoot: null,
+        Theme: ThemeChoice.Dark);
 
     public bool IsGitHubConfigured => !string.IsNullOrWhiteSpace(Owner) && !string.IsNullOrWhiteSpace(Repo);
     // Non-empty is enough: the desktop store handles a missing dir by returning an empty list,
