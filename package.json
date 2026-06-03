@@ -7,6 +7,7 @@
     "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1",
     "dev:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1 -Build",
     "android": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android.ps1",
+    "android:clean": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android.ps1 -Clean",
     "bump": "node version.mjs",
     "build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1",
     "xunit": "dotnet test solution/PostXING4.slnx -c Release"
