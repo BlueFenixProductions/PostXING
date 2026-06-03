@@ -33,13 +33,19 @@ public sealed class FileSystemSettingsStore : ISettingsStore
         _path = Path.Combine(dir, "settings.json");
     }
 
-    public async Task LoadAsync(CancellationToken ct = default)
+    public Task LoadAsync(CancellationToken ct = default)
     {
-        if (!File.Exists(_path)) return;
+        // Synchronous on purpose. The DI registration resolves this store with a blocking
+        // GetAwaiter().GetResult(), and now that the App constructor depends on ISettingsStore that
+        // resolve runs during App construction on the main thread. An awaited async read there
+        // (DeserializeAsync) deadlocks the main thread whenever a settings.json already exists,
+        // leaving the app stuck on the blue splash. The file is tiny; a sync read is correct and
+        // deadlock-free.
+        if (!File.Exists(_path)) return Task.CompletedTask;
         try
         {
-            await using var fs = File.OpenRead(_path);
-            var loaded = await JsonSerializer.DeserializeAsync<AppSettings>(fs, JsonOptions, ct);
+            var json = File.ReadAllText(_path);
+            var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
             if (loaded is not null)
             {
                 _current = loaded;
@@ -50,6 +56,7 @@ public sealed class FileSystemSettingsStore : ISettingsStore
         {
             // Corrupt settings file; keep defaults.
         }
+        return Task.CompletedTask;
     }
 
     public async Task SaveAsync(AppSettings settings, CancellationToken ct = default)

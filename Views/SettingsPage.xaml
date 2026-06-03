@@ -24,6 +24,16 @@
             <VerticalStackLayout Spacing="2"
                                  RadioButtonGroup.GroupName="theme"
                                  RadioButtonGroup.SelectedValue="{Binding Theme}">
+                <VerticalStackLayout.Resources>
+                    <!-- The default RadioButton renders an opaque row fill that reads as a dark band
+                         on the light canvas. Make the row transparent and theme the label so it sits
+                         on the page background in both modes. -->
+                    <Style TargetType="RadioButton">
+                        <Setter Property="BackgroundColor" Value="Transparent" />
+                        <Setter Property="TextColor"
+                                Value="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
+                    </Style>
+                </VerticalStackLayout.Resources>
                 <RadioButton Content="Light" Value="{x:Static vm:ThemeChoice.Light}"
                              SemanticProperties.Description="Light theme" />
                 <RadioButton Content="Dark" Value="{x:Static vm:ThemeChoice.Dark}"
