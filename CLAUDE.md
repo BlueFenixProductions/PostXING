@@ -24,7 +24,8 @@ dotnet run -f net10.0-windows10.0.19041.0   # launch the Windows app (-f require
 dotnet build               # builds both TFMs (Windows + Android) of the App + its libs
 bun dev                    # fast: self-clean + launch the built Windows app, no rebuild (npm run dev too)
 bun dev:build              # self-clean + version-stamp + incremental Windows build, then launch (after code/asset edits)
-bun android                # build + deploy + launch on a connected Android device (USB debugging on)
+bun android                # preflight + deploy OVER the existing app (keeps in-app settings) + launch on a connected device (USB debugging on)
+bun android:clean          # uninstall first (RESETS in-app settings) + wipe obj/bin (use if a deploy ever shows the blank-blue screen)
 bun run build              # full slnx Release build, version-stamped (CI parity; npm run build too)
 bun xunit                  # runs all tests via the slnx       (npm run xunit also works)
 bun bump                   # regenerate .version only (date-based version + hotfix counter)
@@ -118,7 +119,7 @@ The Android head landed 2026-05-30 (`net10.0-android`). Key divergences from Win
   - **host→JS:** fires `EvaluateJavaScriptAsync("…setTextB64(b64)…")` **without awaiting** (the JS still runs); seeds on a short retry loop, no readiness handshake. Base64 survives MAUI's URL-encode round-trip.
   - **JS→host (edit-sync):** on Save, `EditorViewModel.SyncBeforeSaveAsync` → `EditorPage` calls `getText()` via `EvaluateJavaScriptAsync` (return works post-load) and JSON-decodes the result into `RawMarkdown`.
   - Don't try to use the HybridWebView raw-message bridge here — use those `EvaluateJavaScriptAsync` patterns. `BridgeLog` mirrors to logcat tag `PXBRIDGE` (`adb logcat -s PXBRIDGE`).
-- **Deploy.** `bun android` (`scripts/android.ps1`) builds a **clean embedded** APK (`-p:EmbedAssembliesIntoApk=true`) and `-t:Run`s it. Stale MAUI fast-deploy state shows a **blank PhoenixBlue screen**; if you hit that, `adb uninstall net.bluefenix.postxing` then redeploy. adb ships with the Android SDK (`…\Android\android-sdk\platform-tools\adb.exe`), not on PATH.
+- **Deploy.** `bun android` (`scripts/android.ps1`) builds a **clean embedded** APK (`-p:EmbedAssembliesIntoApk=true`) and `-t:Run`s it. Stale MAUI fast-deploy state shows a **blank PhoenixBlue screen**; the script keeps that from happening **without** wiping app data. The default path: resolves adb strictly (ANDROID_HOME / ANDROID_SDK_ROOT / both Program Files SDK paths / LOCALAPPDATA / PATH) and **fails loudly** if missing rather than warn-and-continue; runs a **device preflight** requiring exactly one authorized device (errors on 0 / unauthorized / >1); **pins** every adb call and the `-t:Run` deploy to that serial via `$env:ANDROID_SERIAL`; **force-stops** the app (kills the process, doesn't touch data) and then **installs the embedded APK over the existing app**. It deliberately does **not** `adb uninstall` on the normal path — because the embedded build creates no fast-deploy override state, install-over stays blank-screen-free *and* preserves app data, so **in-app settings / the SecureStorage PAT / the SAF folder grant survive a redeploy** (the earlier hardening uninstalled every time, which is what kept nuking settings). After deploy it runs a health check (process alive via `pidof`, logcat crash scan scoped to the app's pid, screenshot to `%TEMP%\px_deploy.png`). `bun android:clean` is the escape hatch for a blank screen: it **uninstalls** (which *does* reset settings / PAT / folder grant) + wipes obj/bin (`obj\Debug\net10.0-android`, `bin\Debug\net10.0-android`) for a from-scratch APK. adb ships with the Android SDK (`…\Android\android-sdk\platform-tools\adb.exe`), not on PATH.
 - **Storage + GitHub are live on Android.** SAF scoped storage (`SafFolderPicker` + `SafLocalPostStore`, persisted tree URI) backs the Local Posts Folder, and the in-process `HttpGitHubGateway` + a SecureStorage PAT give the phone the full open / save-as-commit / publish-PR / merge loop against the blog repo. `FileSystemSettingsStore` uses `FileSystem.AppDataDirectory` on Android for settings.
 
 ## Branch model
@@ -176,7 +177,7 @@ dotnet run -f net10.0-windows10.0.19041.0   # launch the Windows app (-f require
 dotnet build                    # App (both heads) + libs
 bun xunit   # or npm run xunit  # full slnx test pass
 bun run build  # or npm run build  # full slnx build
-bun android                     # build + deploy to a connected Android device
+bun android                     # build + deploy to a connected Android device (bun android:clean for a from-scratch APK)
 ```
 
 If any of those fail, that is the first thing to fix — the layout (App csproj at root, slnx under `solution/`, `package.json` scripts) is load-bearing and documented in **Run / build / test from the repo root** above.
