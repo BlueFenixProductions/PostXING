@@ -17,6 +17,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _developBranch = "develop";
     [ObservableProperty] private string _contentRoot = string.Empty;
     [ObservableProperty] private string _authorName = string.Empty;
+
+    // App theme. Applies instantly + sticky (see OnThemeChanged), independent of Save/Cancel.
+    [ObservableProperty] private ThemeChoice _theme;
+
     [ObservableProperty] private string _ghAuthDetail = string.Empty;
     [ObservableProperty] private bool _isAuthenticated;
     [ObservableProperty] private bool _isBusy;
@@ -35,6 +39,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     public event EventHandler? CloseRequested;
     public event EventHandler? OpenTerminalRequested;
 
+    /// <summary>Raised when the theme selection changes so the view can apply it to the live app
+    /// (<c>Application.UserAppTheme</c>); the VM can't touch MAUI types directly.</summary>
+    public event EventHandler<ThemeChoice>? ThemeApplyRequested;
+
     public SettingsViewModel(ISettingsStore store, IGitHubGateway gateway, IFolderPicker folderPicker, IGitHubTokenStore tokens)
     {
         _store = store;
@@ -48,6 +56,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         DevelopBranch = s.DevelopBranch;
         ContentRoot = s.ContentRoot ?? string.Empty;
         AuthorName = s.AuthorName ?? string.Empty;
+        // Set the backing field, not the property: assigning the property here would fire
+        // OnThemeChanged during construction (a redundant persist + an apply with no subscriber yet).
+        _theme = s.Theme;
         _ = CheckAuthAsync();
     }
 
@@ -117,11 +128,21 @@ public sealed partial class SettingsViewModel : ObservableObject
             DevelopBranch: string.IsNullOrWhiteSpace(DevelopBranch) ? "develop" : DevelopBranch.Trim(),
             AuthorName: string.IsNullOrWhiteSpace(AuthorName) ? null : AuthorName.Trim(),
             LocalFolder: string.IsNullOrWhiteSpace(LocalFolder) ? null : LocalFolder.Trim(),
-            ContentRoot: string.IsNullOrWhiteSpace(ContentRoot) ? null : ContentRoot.Trim());
+            ContentRoot: string.IsNullOrWhiteSpace(ContentRoot) ? null : ContentRoot.Trim(),
+            Theme: Theme);
         await _store.SaveAsync(s);
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]
     private void Cancel() => CloseRequested?.Invoke(this, EventArgs.Empty);
+
+    // Theme applies instantly and sticks, like any OS theme toggle: the view flips the live app and
+    // we persist immediately, independent of Save/Cancel. Persist off the *stored* settings (not the
+    // in-progress fields) so flipping the theme never commits a half-typed repo/owner edit.
+    partial void OnThemeChanged(ThemeChoice value)
+    {
+        ThemeApplyRequested?.Invoke(this, value);
+        _ = _store.SaveAsync(_store.Current with { Theme = value });
+    }
 }

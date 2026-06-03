@@ -14,6 +14,38 @@
             <Label Style="{StaticResource Kicker}" Text="[ settings ]"
                    SemanticProperties.HeadingLevel="Level1" />
 
+            <!-- Theme: a standard platform RadioButton group (native Material on Android, the
+                 platform control on Windows) - settings chrome follows platform convention, not the
+                 editor's flat-mono idiom. The RadioButtonGroup attached properties bind the group's
+                 selected value straight to the Theme enum (no converter); selecting applies
+                 instantly and persists (SettingsViewModel.OnThemeChanged). -->
+            <Label Style="{StaticResource Kicker}" Text="[ theme ]"
+                   SemanticProperties.HeadingLevel="Level2" />
+            <VerticalStackLayout Spacing="2"
+                                 RadioButtonGroup.GroupName="theme"
+                                 RadioButtonGroup.SelectedValue="{Binding Theme}">
+                <VerticalStackLayout.Resources>
+                    <!-- The default RadioButton renders an opaque row fill that reads as a dark band
+                         on the light canvas. Make the row transparent and theme the label so it sits
+                         on the page background in both modes. -->
+                    <Style TargetType="RadioButton">
+                        <Setter Property="BackgroundColor" Value="Transparent" />
+                        <Setter Property="TextColor"
+                                Value="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
+                    </Style>
+                </VerticalStackLayout.Resources>
+                <RadioButton Content="Light" Value="{x:Static vm:ThemeChoice.Light}"
+                             SemanticProperties.Description="Light theme" />
+                <RadioButton Content="Dark" Value="{x:Static vm:ThemeChoice.Dark}"
+                             SemanticProperties.Description="Dark theme" />
+                <RadioButton Content="System default" Value="{x:Static vm:ThemeChoice.System}"
+                             SemanticProperties.Description="Follow the device theme" />
+            </VerticalStackLayout>
+            <Label Style="{StaticResource FieldCaption}"
+                   Text="dark is the studio default; system follows your device." />
+
+            <BoxView Style="{StaticResource Hairline}" />
+
             <Label Style="{StaticResource Kicker}" Text="[ local posts folder ]"
                    SemanticProperties.HeadingLevel="Level2" />
             <!-- Windows: typed path. Hidden on Android because typing a content:// SAF URI is

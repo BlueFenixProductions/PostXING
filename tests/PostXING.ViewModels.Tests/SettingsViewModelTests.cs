@@ -89,4 +89,47 @@ public sealed class SettingsViewModelTests
         (await tokens.GetTokenAsync()).ShouldBeNull();
         vm.IsAuthenticated.ShouldBeFalse();
     }
+
+    private static (SettingsViewModel vm, ISettingsStore store) CreateVmWithStore(AppSettings? current = null)
+    {
+        var store = Substitute.For<ISettingsStore>();
+        store.Current.Returns(current ?? AppSettings.Default);
+        var gateway = Substitute.For<IGitHubGateway>();
+        gateway.CheckAuthAsync(Arg.Any<CancellationToken>()).Returns(new GhAuthStatus(false, null, "no token"));
+        var vm = new SettingsViewModel(store, gateway, Substitute.For<IFolderPicker>(), new InMemoryGitHubTokenStore());
+        return (vm, store);
+    }
+
+    [Fact]
+    public void Theme_loads_from_the_store()
+    {
+        var (vm, _) = CreateVmWithStore(AppSettings.Default with { Theme = ThemeChoice.Light });
+        vm.Theme.ShouldBe(ThemeChoice.Light);
+    }
+
+    [Fact]
+    public void Changing_theme_applies_and_persists_immediately()
+    {
+        // Instant + sticky: raises the apply event for the view AND writes through to the store, off
+        // the stored settings (not the in-progress fields) - independent of Save/Cancel.
+        var (vm, store) = CreateVmWithStore();   // Default -> Theme = Dark
+        ThemeChoice? applied = null;
+        vm.ThemeApplyRequested += (_, c) => applied = c;
+
+        vm.Theme = ThemeChoice.Light;
+
+        applied.ShouldBe(ThemeChoice.Light);
+        store.Received(1).SaveAsync(Arg.Is<AppSettings>(s => s.Theme == ThemeChoice.Light), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Save_carries_the_theme()
+    {
+        var (vm, store) = CreateVmWithStore();
+        vm.Theme = ThemeChoice.System;
+
+        await vm.SaveCommand.ExecuteAsync(null);
+
+        await store.Received().SaveAsync(Arg.Is<AppSettings>(s => s.Theme == ThemeChoice.System), Arg.Any<CancellationToken>());
+    }
 }
