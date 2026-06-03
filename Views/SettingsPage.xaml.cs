@@ -10,5 +10,11 @@ public partial class SettingsPage : ContentPage
         BindingContext = vm;
         vm.CloseRequested += async (_, _) => await Shell.Current.GoToAsync("..");
         vm.OpenTerminalRequested += async (_, _) => await Shell.Current.GoToAsync("terminal");
+        // Apply the picked theme to the live app (the VM can't touch MAUI types). Instant + sticky.
+        vm.ThemeApplyRequested += (_, choice) => MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (Application.Current is not null)
+                Application.Current.UserAppTheme = ThemeMapping.ToAppTheme(choice);
+        });
     }
 }
