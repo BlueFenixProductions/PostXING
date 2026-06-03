@@ -225,4 +225,76 @@ public sealed class EditorViewModelTests
         await local.Received(1).CreateAsync(
             @"C:\repo", "drafts/pulled-post.md", "pulled-from-editor", Arg.Any<CancellationToken>());
     }
+
+    // ---- Publish / Merge (in-app GitHub: open a PR, then explicitly merge it) ----
+
+    private static EditorViewModel GitHubVm(out InMemoryGitHubGateway gw)
+    {
+        var parser = Substitute.For<IFrontMatterParser>();
+        parser.Parse(Arg.Any<string>())
+            .Returns(call => new ParsedDocument(FrontMatter.Default.WithTitle("Hello World"), call.Arg<string>()));
+        gw = new InMemoryGitHubGateway();
+        gw.SeedBranchAsync("o", "r", "develop", "basesha").GetAwaiter().GetResult();
+        var settings = Substitute.For<ISettingsStore>();
+        settings.Current.Returns(AppSettings.Default with { Owner = "o", Repo = "r" });
+        var local = Substitute.For<ILocalPostStore>();
+        var vm = new EditorViewModel(parser, gw, settings, local, TimeProvider.System, StubGit(), new GitHubPublishService(gw));
+        vm.CancelTitlePromptCommand.Execute(null);   // dismiss the new-post title overlay
+        return vm;
+    }
+
+    [Fact]
+    public async Task Publish_on_a_github_configured_post_opens_a_pr_and_tracks_it()
+    {
+        var vm = GitHubVm(out _);
+        vm.RawMarkdown = "---\ntitle: \"Hello World\"\ndraft: true\n---\n\n# Hi\n";
+
+        await vm.PublishCommand.ExecuteAsync(null);
+
+        vm.PendingPullRequest.ShouldNotBeNull();
+        vm.SaveStatus.ShouldContain("PR #");
+        vm.MergeCommand.CanExecute(null).ShouldBeTrue("a merge target should exist after publishing");
+    }
+
+    [Fact]
+    public async Task Publish_without_a_github_repo_hints_and_tracks_no_pr()
+    {
+        var parser = Substitute.For<IFrontMatterParser>();
+        parser.Parse(Arg.Any<string>()).Returns(call => new ParsedDocument(FrontMatter.Default.WithTitle("X"), call.Arg<string>()));
+        var gateway = Substitute.For<IGitHubGateway>();
+        gateway.CheckAuthAsync(Arg.Any<CancellationToken>()).Returns(new GhAuthStatus(false, null, "stub"));
+        var settings = Substitute.For<ISettingsStore>();
+        settings.Current.Returns(AppSettings.Default);   // no Owner/Repo
+        var local = Substitute.For<ILocalPostStore>();
+        var vm = new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit(), new GitHubPublishService(gateway));
+        vm.CancelTitlePromptCommand.Execute(null);
+        vm.RawMarkdown = "body";
+
+        await vm.PublishCommand.ExecuteAsync(null);
+
+        vm.PendingPullRequest.ShouldBeNull();
+        vm.SaveStatus.ShouldContain("GitHub repo", Case.Insensitive);
+    }
+
+    [Fact]
+    public async Task Merge_after_publish_merges_the_tracked_pr_and_clears_it()
+    {
+        var vm = GitHubVm(out _);
+        vm.RawMarkdown = "---\ntitle: \"Hello World\"\ndraft: true\n---\n\n# Hi\n";
+        await vm.PublishCommand.ExecuteAsync(null);
+        vm.PendingPullRequest.ShouldNotBeNull();
+
+        await vm.MergeCommand.ExecuteAsync(null);
+
+        vm.SaveStatus.ShouldContain("Merged", Case.Insensitive);
+        vm.PendingPullRequest.ShouldBeNull();
+        vm.MergeCommand.CanExecute(null).ShouldBeFalse("the merge target is consumed once merged");
+    }
+
+    [Fact]
+    public void Merge_is_disabled_when_no_pr_is_pending()
+    {
+        var vm = GitHubVm(out _);
+        vm.MergeCommand.CanExecute(null).ShouldBeFalse();
+    }
 }

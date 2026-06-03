@@ -60,6 +60,11 @@ public sealed partial class EditorViewModel : ObservableObject
     [ObservableProperty]
     private string _saveStatus = string.Empty;
 
+    // The PR opened by the last Publish, awaiting an explicit Merge. Gates MergeCommand.
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(MergeCommand))]
+    private int? _pendingPullRequest;
+
     private PostHandle _handle = PostHandle.NewDraft;
     private bool _seeding;
 
@@ -67,7 +72,6 @@ public sealed partial class EditorViewModel : ObservableObject
     public event EventHandler? SettingsRequested;
     public event EventHandler? AboutRequested;
     public event EventHandler? PreviewRequested;
-    public event EventHandler? PublishConfirmationRequested;
 
     public EditorViewModel(
         IFrontMatterParser parser,
@@ -254,18 +258,15 @@ public sealed partial class EditorViewModel : ObservableObject
         }
     }
 
+    /// <summary>Publish the current post to the configured blog repo: open a PR from a fresh
+    /// post branch into the user's target branch. No auto-merge — <see cref="MergeCommand"/> is
+    /// the explicit, separate step. The published content's front matter <c>draft:</c> is flipped
+    /// to false. Surfaces <see cref="PublishState"/> through <see cref="SaveStatus"/>.</summary>
     [RelayCommand(CanExecute = nameof(IsDirty))]
-    private Task PublishAsync()
+    private async Task PublishAsync()
     {
-        PublishConfirmationRequested?.Invoke(this, EventArgs.Empty);
-        return Task.CompletedTask;
-    }
+        if (SyncBeforeSaveAsync is not null) await SyncBeforeSaveAsync();
 
-    /// <summary>Called by the EditorPage after the publish-confirmation modal closes. Builds
-    /// a <see cref="Post"/> + <see cref="SiteConfig"/> from settings and runs the publish flow,
-    /// surfacing <see cref="PublishState"/> through <see cref="SaveStatus"/>.</summary>
-    public async Task ConfirmPublishAsync(bool autoMerge, CancellationToken ct = default)
-    {
         var s = _settings.Current;
         if (!s.IsGitHubConfigured)
         {
@@ -275,13 +276,15 @@ public sealed partial class EditorViewModel : ObservableObject
 
         var slug = Slug.From(string.IsNullOrWhiteSpace(FrontMatter.Title) ? "untitled" : FrontMatter.Title);
         var today = DateOnly.FromDateTime(_clock.GetUtcNow().UtcDateTime);
-        var post = new Post(slug, FrontMatter, RawMarkdown, today);
-        var site = SiteConfig.For(s.Owner!, s.Repo!) with { DevelopBranch = s.DevelopBranch };
+        var published = FrontMatterEditor.WithDraft(RawMarkdown, draft: false);
+        var post = new Post(slug, FrontMatter, published, today);
+        var site = SiteConfig.For(s.Owner!, s.Repo!) with { DevelopBranch = s.DevelopBranch, ContentRoot = s.ContentRoot };
 
-        SaveStatus = autoMerge ? "Publishing (auto-merge on green CI)..." : "Publishing...";
+        SaveStatus = "Publishing...";
         try
         {
-            var state = await _publishService.PublishAsync(post, site, RawMarkdown, autoMerge, ct);
+            var state = await _publishService.PublishAsync(post, site, published, autoMerge: false);
+            PendingPullRequest = state.PullRequestNumber;
             SaveStatus = DescribePublishState(state);
             if (state.Kind != PublishKind.Failed) IsDirty = false;
         }
@@ -290,6 +293,30 @@ public sealed partial class EditorViewModel : ObservableObject
             SaveStatus = $"Publish failed: {ex.Message}";
         }
     }
+
+    /// <summary>Merge the PR opened by the last <see cref="PublishCommand"/> into the target
+    /// branch — the explicit "merge" step. A direct squash-merge with no CI/check polling; the
+    /// blog repo's branch rules are the user's own.</summary>
+    [RelayCommand(CanExecute = nameof(CanMerge))]
+    private async Task MergeAsync()
+    {
+        var s = _settings.Current;
+        if (PendingPullRequest is not int pr || !s.IsGitHubConfigured) return;
+
+        SaveStatus = $"Merging PR #{pr}...";
+        try
+        {
+            var sha = await _gateway.MergePullRequestAsync(s.Owner!, s.Repo!, pr, MergeStrategy.Squash);
+            SaveStatus = $"Merged PR #{pr} ({sha[..Math.Min(7, sha.Length)]})";
+            PendingPullRequest = null;
+        }
+        catch (Exception ex)
+        {
+            SaveStatus = $"Merge failed: {ex.Message}";
+        }
+    }
+
+    private bool CanMerge() => PendingPullRequest is not null;
 
     private static string DescribePublishState(PublishState state) => state.Kind switch
     {
