@@ -60,6 +60,16 @@
     <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- Per-developer first-run Settings seed. When a gitignored defaults.local.json exists at the
+       project root, bake it in so FileSystemSettingsStore can pre-fill personal defaults on a fresh
+       install. Absent on a public clone / CI build, so the app falls back to AppSettings.Default.
+       The <None Remove> stops the SDK's implicit None glob (this csproj is at the repo root) from
+       double-including the same file under another item type. -->
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\defaults.local.json')">
+    <None Remove="defaults.local.json" />
+    <EmbeddedResource Include="defaults.local.json" LogicalName="PostXING.App.defaults.local.json" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" />
     <PackageReference Include="CommunityToolkit.Mvvm" />

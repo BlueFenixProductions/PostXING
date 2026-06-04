@@ -42,3 +42,7 @@ Thumbs.db
 .claude/skills/
 .impeccable/
 .claude/settings.local.json
+
+# Per-developer first-run Settings seed (personal defaults baked into the local build only).
+# defaults.local.example.json is the committed template; the real file stays out of the public repo.
+defaults.local.json
