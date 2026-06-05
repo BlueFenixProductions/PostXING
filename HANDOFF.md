@@ -14,11 +14,11 @@ below, with the blank-screen note corrected per commit `72552d8`).
   `PostXING-decompiled` / `PostXING-android` two-folder layout in the 2026-05-30 note.)
 - **This session's worktree:** `C:\Users\Chris\Documents\GitHub\PostXING\.claude\worktrees\practical-ptolemy-ce845a`
   on `claude/practical-ptolemy-ce845a` (same tip as develop).
-- **develop tip = `5a037c9` = `origin/develop` — pushed and in sync** (operator-pushed 2026-06-05).
+- **develop = `origin/develop` — pushed and in sync** (latest: delete-a-post + #10 seed, 2026-06-05).
 - **`main`/`stage`** are branch-protected (PR + `Build + Test` check); `develop` is the integration
   branch. CI auto-fires only on main/stage; run on develop on demand:
   `gh workflow run CI --ref develop`.
-- **Device (Pixel 7 / CalyxOS):** not touched this session; current installed build unverified.
+- **Device (Pixel 7 / CalyxOS):** running the current develop build (#10 seed + delete-a-post), deployed via `bun android` (install-over) and field-verified 2026-06-05.
 
 ## Done this session (2026-06-04) — issue #10 "default content folder = blog"
 
@@ -32,6 +32,16 @@ Implemented, tested, **merged to develop and pushed to origin** (fast-forward `7
 **Verification:** TDD red→green; full suite **169 passed / 0 failed** (Core 7 · Markdown 66 · GitHub 47 · ViewModels 49); Windows build clean; Android head compiles (slnx test AOT pass); seed embed byte-verified in `PostXING.App.dll` (resource name + `vitepress.chris.pelatari.com` / `blog` present).
 
 **Live-verified 2026-06-05:** app boots clean on the seed branch (shell-wrapped `bun dev`); the new `LoadAsync` seed path runs during App construction with no crash/deadlock.
+
+## Done this session (2026-06-05) — delete a post (Android)
+
+Implemented, tested, deployed to the Pixel, and **field-verified** (swipe-deleted a draft).
+
+| Item | State |
+|---|---|
+| **Delete a post** | Swipe-to-delete on the Open list: `SwipeView` row → red `delete` → `DisplayAlertAsync` confirm (tap-to-open still works — swipe passes taps through). New `ILocalPostStore.DeleteAsync` (SAF `DocumentsContract.DeleteDocument` / desktop `File.Delete`) and `IGitHubGateway.DeleteFileAsync` (Android `HttpClient` `DELETE /contents` w/ blob sha; desktop `gh api -X DELETE`; in-memory). `OpenPostViewModel.DeleteCommand` dispatches on `PostEntry.Source`: local deletes directly; GitHub draft/post fetches the sha then **deletes via a direct commit to `DevelopBranch`** (no PR), then drops the row. Confirmation lives in the page (the VM can't show dialogs). 11 files. |
+
+**Verification:** TDD red→green (3 new VM tests: local / github / already-gone); full suite **172 passed / 0 failed** (Core 7 · Markdown 66 · GitHub 47 · ViewModels 52); both heads compile clean; deployed via `bun android` (install-over) + field-verified on the Pixel 7.
 
 ## Next steps (immediate)
 
@@ -122,7 +132,7 @@ bun dev:build    # Windows incremental build + launch (after edits)
 bun android      # build + deploy OVER the app on the connected Pixel 7 (keeps settings)
 bun android:clean# uninstall (RESETS settings) + wipe obj/bin — rare escape hatch
 bun run build    # full slnx Release, both heads (CI parity)
-bun xunit        # 169 tests
+bun xunit        # 172 tests
 gh workflow run CI --ref develop   # CI on demand (auto-fires only on main/stage)
 ```
 
