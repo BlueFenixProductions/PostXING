@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PostXING.App.Views.SplashPage"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource PhoenixBlue}">
+
+    <!-- Bold PhoenixBlue brand splash. Shown once at launch (pre-Shell), then hands off to
+         AppShell -> OpenPostPage. The backdrop matches the Android native colorPrimary splash,
+         so the OS pre-render flows seamlessly into this choreography with no flash. Tap to skip. -->
+    <Grid x:Name="Root">
+        <Grid.GestureRecognizers>
+            <TapGestureRecognizer Tapped="OnSkipTapped" />
+        </Grid.GestureRecognizers>
+
+        <!-- Centered choreography group. InputTransparent so taps fall through to Root's skip. -->
+        <VerticalStackLayout x:Name="ContentLayer" InputTransparent="True"
+                             HorizontalOptions="Center" VerticalOptions="Center" Spacing="22">
+
+            <!-- Icon + amber halo. The Ellipse blooms behind the mark; the badge carries a
+                 tight ForgeAmber shadow (the About page's Glow-Phoenix recipe). -->
+            <Grid WidthRequest="240" HeightRequest="240" HorizontalOptions="Center">
+
+                <Ellipse x:Name="Glow" WidthRequest="240" HeightRequest="240"
+                         Opacity="0" Scale="0.6"
+                         HorizontalOptions="Center" VerticalOptions="Center">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush Center="0.5,0.5" Radius="0.5">
+                            <GradientStop Offset="0.0" Color="#D9E08A2E" />
+                            <GradientStop Offset="0.5" Color="#66E08A2E" />
+                            <GradientStop Offset="1.0" Color="#00E08A2E" />
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                </Ellipse>
+
+                <Border x:Name="IconBadge" WidthRequest="132" HeightRequest="132"
+                        StrokeThickness="0" BackgroundColor="{StaticResource Ink1000}"
+                        Opacity="0" Scale="0.7"
+                        HorizontalOptions="Center" VerticalOptions="Center"
+                        SemanticProperties.Description="PostXING">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="30" />
+                    </Border.StrokeShape>
+                    <Border.Shadow>
+                        <Shadow Radius="34" Offset="0,0" Opacity="0.85">
+                            <Shadow.Brush>
+                                <SolidColorBrush Color="{StaticResource ForgeAmber}" />
+                            </Shadow.Brush>
+                        </Shadow>
+                    </Border.Shadow>
+
+                    <!-- Image + sheen, clipped to the rounded badge by the Border. -->
+                    <Grid>
+                        <Image Source="postxing_logo.png" Aspect="AspectFit" Margin="10" />
+                        <Rectangle x:Name="Sheen" WidthRequest="46" HeightRequest="240"
+                                   Rotation="18" Opacity="0" TranslationX="-130"
+                                   HorizontalOptions="Center" VerticalOptions="Center">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Offset="0.0" Color="#00FFFFFF" />
+                                    <GradientStop Offset="0.5" Color="#73FFFFFF" />
+                                    <GradientStop Offset="1.0" Color="#00FFFFFF" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <Label x:Name="Wordmark" Text="PostXING"
+                   FontFamily="HackBold" FontSize="36"
+                   TextColor="{StaticResource Paper100}"
+                   HorizontalTextAlignment="Center"
+                   Opacity="0" TranslationY="16" />
+
+            <Label x:Name="VersionLabel"
+                   FontFamily="HackRegular" FontSize="13"
+                   TextColor="{StaticResource Paper300}"
+                   HorizontalTextAlignment="Center"
+                   Opacity="0" />
+
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

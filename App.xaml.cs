@@ -1,3 +1,4 @@
+using PostXING.App.Views;
 using PostXING.ViewModels;
 
 namespace PostXING.App;
@@ -14,6 +15,8 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new Window(new AppShell()) { Title = "PostXING 4.0" };
+        // Launch into the brand splash; it hands the window off to AppShell when its
+        // choreography finishes (see SplashPage.HandoffAsync).
+        return new Window(new SplashPage()) { Title = "PostXING 4.0" };
     }
 }
