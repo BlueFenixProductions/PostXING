@@ -125,7 +125,7 @@ The Android head landed 2026-05-30 (`net10.0-android`). Key divergences from Win
 
 ## Branch model
 
-- `main` — production. Operator-push only. PRs from `stage` only. Linear history required.
+- `main` — production. Operator-only. PRs from `stage`. (No linear-history requirement — see the promotion rule below.)
 - `stage` — pre-production integration. PRs from `develop`. Coverage gate.
 - `develop` — active integration branch (formerly `px-modernized`). Feature branches merge here.
 - `px-decompiled` — frozen snapshot of the recovered 2007 decompilation (the pre-rewrite legacy code). Reference only; not in the px4 build / PR pipeline.
@@ -133,7 +133,11 @@ The Android head landed 2026-05-30 (`net10.0-android`). Key divergences from Win
 
 The app never pushes directly to `stage` or `main`.
 
-**Branch protection is live on `main` and `stage`** (since 2026-05-29). Both require a PR plus the `Build + Test` CI check before merge; `main` also requires linear history. `enforce_admins` is off, so the operator/admin can still push or fast-forward directly (the escape hatch used for the px4 square-one promotion) — everyone else, and normal flow, goes through PRs (`develop` → `stage` → `main`). Force-pushes and deletions are blocked on both; a true force-rewrite needs `allow_force_pushes` toggled off first. CI fires only on these two gate branches (push + PR); check `develop` on demand with `gh workflow run CI --ref develop`.
+**Promote with merge commits, never squash; never back-merge.** `develop → stage → main` is promoted via **real merge commits** (`gh pr merge --merge`), so each upstream branch stays an ancestor of the next and all three share one history — that's what keeps promotions conflict-free. It is also why **`main → develop` (any downstream → upstream) back-merge is banned**: a back-merge is only ever needed to paper over squash-drift, which this rule removes. Squash-merge is allowed **only** for ephemeral feature branches into `develop` (deleted after merge, so they never re-merge — the one case where squash is safe).
+
+History/lesson: through 2026-06-05 promotions were squash-merged, which split `develop`/`stage`/`main` into divergent islands and forced repeated `main → develop` back-merges to clear *false* conflicts on every promotion. On **2026-06-05** the model switched to merge-commit promotions — `main`'s `required_linear_history` was turned off and `develop` was re-anchored to `main` (`70230f7`). Don't reintroduce squash promotions or the back-merge.
+
+**Branch protection is live on `main` and `stage`** (since 2026-05-29). Both require a PR plus the `Build + Test` CI check before merge. `enforce_admins` is off, so the operator/admin can bypass the *PR* rule for promotion pushes (normal flow still goes through PRs: `develop` → `stage` → `main`). Force-pushes and deletions are blocked on both — and this blocks even the admin (a `stage` force-reset is rejected); a force-rewrite needs `allow_force_pushes` toggled **on** first. CI fires on push + PR to the two gate branches; check `develop` on demand with `gh workflow run CI --ref develop`.
 
 ## Identity / packaging
 
