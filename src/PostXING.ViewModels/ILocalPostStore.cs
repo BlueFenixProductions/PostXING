@@ -19,4 +19,8 @@ public interface ILocalPostStore
     /// identifier. Keeping the path/URI construction here (not in the view models) is what lets the
     /// Android SAF store map "drafts/foo.md" onto a document tree without leaking content:// URIs.</summary>
     Task<string> CreateAsync(string folder, string relativePath, string contents, CancellationToken ct = default);
+
+    /// <summary>Delete the file identified by <paramref name="id"/> (a filesystem path on desktop,
+    /// a SAF document URI on Android). A file that's already gone is not an error.</summary>
+    Task DeleteAsync(string id, CancellationToken ct = default);
 }

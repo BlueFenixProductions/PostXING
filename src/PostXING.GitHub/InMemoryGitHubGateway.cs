@@ -42,6 +42,12 @@ public sealed class InMemoryGitHubGateway : IGitHubGateway
         return Task.CompletedTask;
     }
 
+    public Task DeleteFileAsync(string owner, string repo, string branch, string path, string commitMessage, string fileSha, CancellationToken ct = default)
+    {
+        _files.TryRemove((owner, repo, branch, path), out _);
+        return Task.CompletedTask;
+    }
+
     public Task<int> OpenPullRequestAsync(string owner, string repo, string headBranch, string baseBranch, string title, string body, CancellationToken ct = default)
     {
         var num = Interlocked.Increment(ref _nextPr);

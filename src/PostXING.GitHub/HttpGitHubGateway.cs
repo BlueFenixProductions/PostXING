@@ -75,6 +75,18 @@ public sealed class HttpGitHubGateway(HttpClient http, IGitHubTokenStore tokens,
         EnsureSuccess(status, body, $"upsert file {path}");
     }
 
+    public async Task DeleteFileAsync(string owner, string repo, string branch, string path, string commitMessage, string fileSha, CancellationToken ct = default)
+    {
+        var payload = WriteObject(w =>
+        {
+            w.WriteString("message", commitMessage);
+            w.WriteString("sha", fileSha);
+            w.WriteString("branch", branch);
+        });
+        var (status, body) = await SendAsync(HttpMethod.Delete, Endpoint($"repos/{owner}/{repo}/contents/{path}"), payload, ct);
+        EnsureSuccess(status, body, $"delete file {path}");
+    }
+
     public async Task<int> OpenPullRequestAsync(string owner, string repo, string headBranch, string baseBranch, string title, string body, CancellationToken ct = default)
     {
         var payload = WriteObject(w =>

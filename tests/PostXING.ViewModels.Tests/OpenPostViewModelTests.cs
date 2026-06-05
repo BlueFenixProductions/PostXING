@@ -197,4 +197,57 @@ public sealed class OpenPostViewModelTests
         await vm.SelectCommand.ExecuteAsync(entry);
         editor.ShouldBe(1, "after a failed read the latch must reset so a retry can navigate");
     }
+
+    [Fact]
+    public async Task Deleting_a_local_post_deletes_the_file_and_removes_the_row()
+    {
+        var (vm, _, settings, local) = CreateVm();
+        const string folder = @"C:\not-a-real-path";
+        settings.Current.Returns(AppSettings.Default with { LocalFolder = folder });
+        var file = new LocalPostFile(@"C:\p\drafts\a.md", "drafts/a.md", DateTimeOffset.UtcNow);
+        local.List(folder).Returns(new[] { file });
+        await vm.RefreshAsync();
+        var entry = vm.Entries.Single();
+
+        await vm.DeleteCommand.ExecuteAsync(entry);
+
+        await local.Received(1).DeleteAsync(entry.Identifier);
+        vm.Entries.ShouldNotContain(entry);
+    }
+
+    [Fact]
+    public async Task Deleting_a_github_post_fetches_the_sha_then_deletes_on_the_branch()
+    {
+        var (vm, gateway, settings, _) = CreateVm();
+        settings.Current.Returns(AppSettings.Default with { Owner = "o", Repo = "r" }); // DevelopBranch = develop
+        gateway.ListMarkdownFilesAsync("o", "r", "develop", "drafts/").Returns(Array.Empty<string>());
+        gateway.ListMarkdownFilesAsync("o", "r", "develop", "posts/").Returns(new[] { "posts/2026-05-20-new.md" });
+        gateway.GetFileShaAsync("o", "r", "develop", "posts/2026-05-20-new.md").Returns("sha-123");
+        await vm.RefreshAsync();
+        var entry = vm.Entries.Single();
+
+        await vm.DeleteCommand.ExecuteAsync(entry);
+
+        await gateway.Received(1).DeleteFileAsync("o", "r", "develop", "posts/2026-05-20-new.md", "Delete posts/2026-05-20-new.md", "sha-123");
+        vm.Entries.ShouldNotContain(entry);
+    }
+
+    [Fact]
+    public async Task Deleting_a_github_post_thats_already_gone_drops_the_row_without_committing()
+    {
+        var (vm, gateway, settings, _) = CreateVm();
+        settings.Current.Returns(AppSettings.Default with { Owner = "o", Repo = "r" });
+        gateway.ListMarkdownFilesAsync("o", "r", "develop", "drafts/").Returns(new[] { "drafts/stale.md" });
+        gateway.ListMarkdownFilesAsync("o", "r", "develop", "posts/").Returns(Array.Empty<string>());
+        gateway.GetFileShaAsync("o", "r", "develop", "drafts/stale.md").Returns((string?)null);
+        await vm.RefreshAsync();
+        var entry = vm.Entries.Single();
+
+        await vm.DeleteCommand.ExecuteAsync(entry);
+
+        await gateway.DidNotReceive().DeleteFileAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        vm.Entries.ShouldNotContain(entry);
+    }
 }
