@@ -29,6 +29,12 @@ public sealed class FileSystemLocalPostStore : ILocalPostStore
         await File.WriteAllTextAsync(id, contents, ct);
     }
 
+    public Task DeleteAsync(string id, CancellationToken ct = default)
+    {
+        if (File.Exists(id)) File.Delete(id);
+        return Task.CompletedTask;
+    }
+
     public async Task<string> CreateAsync(string folder, string relativePath, string contents, CancellationToken ct = default)
     {
         var fullPath = Path.Combine(folder, relativePath.Replace('/', Path.DirectorySeparatorChar));

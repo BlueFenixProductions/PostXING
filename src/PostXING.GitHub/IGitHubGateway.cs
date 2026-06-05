@@ -29,6 +29,9 @@ public interface IGitHubGateway
     /// existing paths).</summary>
     Task<string?> GetFileShaAsync(string owner, string repo, string branch, string path, CancellationToken ct = default);
     Task UpsertFileAsync(string owner, string repo, string branch, string path, string content, string commitMessage, string? existingFileSha, CancellationToken ct = default);
+    /// <summary>Delete the file at <paramref name="path"/> on <paramref name="branch"/> in a single
+    /// commit. The Contents API requires the current blob sha (from <see cref="GetFileShaAsync"/>).</summary>
+    Task DeleteFileAsync(string owner, string repo, string branch, string path, string commitMessage, string fileSha, CancellationToken ct = default);
     Task<int> OpenPullRequestAsync(string owner, string repo, string headBranch, string baseBranch, string title, string body, CancellationToken ct = default);
     Task<PullRequestStatus> GetPullRequestStatusAsync(string owner, string repo, int prNumber, CancellationToken ct = default);
     Task<string> MergePullRequestAsync(string owner, string repo, int prNumber, MergeStrategy strategy, CancellationToken ct = default);

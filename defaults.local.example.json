@@ -1,0 +1,10 @@
+{
+  "_comment": "Copy this file to defaults.local.json (gitignored) and fill in your own values to pre-seed Settings on a fresh install / after a wipe. It is the same JSON shape as the app's settings.json, so you can also just copy your %AppData%\\PostXING\\settings.json here. Only baked into the build when defaults.local.json exists; a public clone with no such file gets the neutral AppSettings.Default. Leave LocalFolder null - it is per-device (a Windows path is meaningless in the Android APK, and Android uses a SAF content:// URI you pick in-app).",
+  "Owner": "your-github-username",
+  "Repo": "your-blog-repo",
+  "DevelopBranch": "main",
+  "AuthorName": "Your Name",
+  "LocalFolder": null,
+  "ContentRoot": "blog",
+  "Theme": "Dark"
+}

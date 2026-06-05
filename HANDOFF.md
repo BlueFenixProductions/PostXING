@@ -1,139 +1,150 @@
-# PostXING 4.0 — Handoff (2026-05-30, late session)
+# PostXING 4.0 — Handoff (2026-06-05)
 
-Working pickup note. `CLAUDE.md` is the canonical project doc (read its **Android notes**
-section first). This file rolls forward only; for the in-flight design that drove the
-SAF + git work, see `~/.claude/plans/can-maui-be-deployed-tranquil-badger.md`.
+Working pickup note. `CLAUDE.md` is the canonical project doc (read its **Android notes** and
+**Hard rules** first). This file **rolls forward only**: the "Done this session" + "Repo/branch
+state" sections reflect the latest session; the "Durable knowledge" / "Architecture notes" below
+accumulate and are kept reconciled with CLAUDE.md. Rolled forward from the 2026-05-30 Android-port
+handoff (its per-commit session log is now git history; its still-load-bearing knowledge is kept
+below, with the blank-screen note corrected per commit `72552d8`).
 
 ## Repo / branch state
 
 - **Remote:** `github.com/BlueFenixProductions/PostXING` (`origin`).
-- **Local main checkout:** `C:\Users\Chris\Documents\GitHub\PostXING-decompiled` (folder name is
-  a holdover from the shelved decompilation; the project is "PostXING 4.0"). On `develop`.
-- **Worktree** (where Android feature work happens): `C:\Users\Chris\Documents\GitHub\PostXING-android`
-  on `feat/android-target`. Pattern: edit there → commit → `git rebase develop` (cheap, the
-  Android-only follow-up commits keep ff-merging cleanly) → in the main checkout
-  `git merge --ff-only feat/android-target && git push origin develop`. Both checkouts are
-  clean and at the same tip.
-- **develop tip = origin/develop tip = `8a37246`** (pushed). All session work is on develop.
-- **`main`/`stage`** are branch-protected (PR + `Build + Test` check); `develop` is the
-  integration branch. CI auto-fires only on main/stage; trigger on develop on demand with
+- **Main checkout:** `C:\Users\Chris\Documents\GitHub\PostXING` — on `develop`. (Supersedes the old
+  `PostXING-decompiled` / `PostXING-android` two-folder layout in the 2026-05-30 note.)
+- **This session's worktree:** `C:\Users\Chris\Documents\GitHub\PostXING\.claude\worktrees\practical-ptolemy-ce845a`
+  on `claude/practical-ptolemy-ce845a` (same tip as develop).
+- **develop = `origin/develop` — pushed and in sync** (latest: delete-a-post + #10 seed, 2026-06-05).
+- **`main`/`stage`** are branch-protected (PR + `Build + Test` check); `develop` is the integration
+  branch. CI auto-fires only on main/stage; run on develop on demand:
   `gh workflow run CI --ref develop`.
-- **Device:** Pixel 7 / CalyxOS, USB debugging on. Currently running 4.4.530.9
-  (versionCode 40530009) — the develop tip stamped + redeployed at end of session.
+- **Device (Pixel 7 / CalyxOS):** running the current develop build (#10 seed + delete-a-post), deployed via `bun android` (install-over) and field-verified 2026-06-05.
 
-## Done this session (all on develop)
+## Done this session (2026-06-04) — issue #10 "default content folder = blog"
+
+Implemented, tested, **merged to develop and pushed to origin** (fast-forward `72552d8 → 5a037c9`; `origin/develop` = `5a037c9`).
 
 | Item | Commit | State |
 |---|---|---|
-| HANDOFF.md introduced | `176fc64` | starting handoff for the SAF + git follow-ups |
-| **A — native Android SAF storage** | `87a50cc` | `IFolderPicker` + `SafFolderPicker` (ACTION_OPEN_DOCUMENT_TREE + persistable Read\|Write grant via `MainActivity.OnActivityResult`) + `SafLocalPostStore` (DocumentsContract + ContentResolver, no `DocumentFile` package) + DI branching in `MauiProgram` + Settings "pick folder..." button. `AppSettings.IsLocalConfigured` relaxed from `Directory.Exists` to non-empty so SAF `content://` URIs qualify. **Verified on Pixel 7 for a Termux-managed folder**; non-Termux trees untested. |
-| **D — publish flow + GH draft-save + local git ops** | `d77d027` | EditorPage `PublishConfirmationRequested` → action-sheet modal (Windows-only) → `EditorViewModel.ConfirmPublishAsync` → `GitHubPublishService.PublishAsync`. `IGitHubGateway.GetFileShaAsync` is real on the gateway + used by the service (`gh api .../contents/{path}?ref=... --jq .sha`; 404 → null). New thin `GitHubPublishService.SaveToBranchAsync(site, path, content, msg)` so SaveAsync's GH branch writes back to the opened path (works for drafts/ and posts/). `IGitStatusService` grows `CommitAsync/PushAsync/PullAsync` + new `GitOperationResult` record; sync chip on Editor + Open pages is actionable (commit & push / commit / push / pull / refresh). EditorViewModel ctor 6→7 deps, locking test updated. **113/113 xunit pass** (+8 ops tests). |
-| **Android bugfixes pass 1** | `11b8e04` | (a) `MainActivity` gets `WindowSoftInputMode = SoftInput.AdjustResize`. (b) `Services/PreviewStyles` switched from `File.ReadAllText(AppContext.BaseDirectory + …)` to `FileSystem.OpenAppPackageFileAsync("preview/{file}")` so the github-markdown CSS actually loads on Android (was returning empty → preview body rendered unreadable black-on-dark). (c) `EditorPage.PreviewRequested` calls `SyncEditorTextBeforeSaveAsync()` on Android so the preview sees current typing, not the seed. |
-| **Android editor pass 2** (IME composition) | `7cf0532` | `Resources/Raw/editor/index.html`: contenteditable changed `true` → `plaintext-only`; track `compositionstart`/`compositionend` and skip rehighlight while composing (rehighlight was aborting IME dictation mid-utterance + dropping Enter). Voice-to-text now commits the full utterance. |
-| **Android editor pass 3** (viewport sizing) | `8a37246` | `#editor` height now follows `window.visualViewport.height` via a CSS custom property `--vv-h` updated from JS. Independent of WebView AdjustResize quirks. `scrollCaretIntoView()` is wrapped in `requestAnimationFrame` and falls back to the containing element's rect when the collapsed range's own rect is `(0,0,0,0)` (an Android WebView quirk at end-of-line). |
+| **#10 — first-run personal-defaults seed** | `cfb6810` | Pre-fills Settings on a fresh install / after a wipe (content folder=`blog`, owner/repo, integration branch=`main`, author) **without committing personal values to the public repo**. Mechanism: gitignored `defaults.local.json` at repo root → conditionally embedded (`EmbeddedResource` + `Exists` guard in `PostXING.App.csproj`) → `FileSystemSettingsStore.LoadAsync` seeds `Current` from it when no `settings.json` exists, else neutral `AppSettings.Default`. Parser `SettingsSeed.ParseOrDefault` (net10.0, unit-tested). Committed source stays neutral; no XAML change. 6 files. |
+| **Local permission allowlist** | `5a037c9` | `.claude/settings.local.json` expanded (you asked to include it in the merge). |
 
-## Open verifies (operator-driven)
+**Verification:** TDD red→green; full suite **169 passed / 0 failed** (Core 7 · Markdown 66 · GitHub 47 · ViewModels 49); Windows build clean; Android head compiles (slnx test AOT pass); seed embed byte-verified in `PostXING.App.dll` (resource name + `vitepress.chris.pelatari.com` / `blog` present).
 
-These all rely on either a real GitHub repo, a phone, or both. None can be exercised from
-the test suite.
+**Live-verified 2026-06-05:** app boots clean on the seed branch (shell-wrapped `bun dev`); the new `LoadAsync` seed path runs during App construction with no crash/deadlock.
 
-- **SAF — non-Termux folder trees.** Pick a primary-external folder (e.g. `Documents/`,
-  `Downloads/`) and confirm New → type → Save → reopen still persists. The hand-rolled
-  `Intent.ActionOpenDocumentTree` + `MainActivity.OnActivityResult` routing works for the
-  Termux provider; if a system DocumentsProvider doesn't return through that path, the
-  next reasonable move is MAUI's own `Microsoft.Maui.Storage.FolderPicker` (which uses
-  AndroidX `RegisterForActivityResult` under the hood). **Caveat:** `FolderPicker` is not
-  present in MAUI 10.0.20 — I tried that route and the build errored with
-  `CS0103: The name 'FolderPicker' does not exist`. So either wait for a MAUI bump, or
-  switch the hand-rolled picker to `ComponentActivity.RegisterForActivityResult` directly.
-- **Android editor pass 3 verify.** Re-confirm: long body that pushes past the IME stays
-  visible above the keyboard as you type; Enter creates a real new line; cursor follows.
-  If it still drifts, `adb logcat -s PXBRIDGE *:E` and the in-memory diag ring in
-  `index.html` (window.PostXING.getDiag()) are the trace surface.
-- **Windows publish flow against a real GitHub repo.** Open a draft → tap Publish →
-  pick "open PR only" → confirm a real PR shows up on the configured Owner/Repo against
-  `DevelopBranch`. Status line should read `PR #N opened on post/<slug>-<date>`. Auto-merge
-  variant waits up to 10 min for checks then squash-merges. The service has been there since
-  pre-session; only the UI wiring is new.
-- **Windows sync chip on the PostXING repo itself.** Set Local Posts Folder to a real git
-  repo (e.g. this checkout), tap the chip → commit & push exercises the new
-  `GitCliStatusService.CommitAsync/PushAsync` against `git -C <folder> …`. Pull uses
-  `--ff-only` and refuses a diverged-history auto-merge.
+## Done this session (2026-06-05) — delete a post (Android)
 
-## Architecture notes you'll want when you pick this up
+Implemented, tested, deployed to the Pixel, and **field-verified** (swipe-deleted a draft).
 
-### The Save-GH path opportunistically chose layering over the handoff's literal text
+| Item | State |
+|---|---|
+| **Delete a post** | Swipe-to-delete on the Open list: `SwipeView` row → red `delete` → `DisplayAlertAsync` confirm (tap-to-open still works — swipe passes taps through). New `ILocalPostStore.DeleteAsync` (SAF `DocumentsContract.DeleteDocument` / desktop `File.Delete`) and `IGitHubGateway.DeleteFileAsync` (Android `HttpClient` `DELETE /contents` w/ blob sha; desktop `gh api -X DELETE`; in-memory). `OpenPostViewModel.DeleteCommand` dispatches on `PostEntry.Source`: local deletes directly; GitHub draft/post fetches the sha then **deletes via a direct commit to `DevelopBranch`** (no PR), then drops the row. Confirmation lives in the page (the VM can't show dialogs). 11 files. |
 
-The pre-session handoff said `EditorViewModel.SaveAsync` GitHub branch should call
-`GitHubPublishService.SaveDraftAsync(post, site, RawMarkdown)`. I went with a small new
-`SaveToBranchAsync(site, path, content, msg)` instead because `SaveDraftAsync` hard-codes
-`drafts/{slug}.md` from the post's title — saving a post opened from `posts/` would
-silently re-route to `drafts/` (or rename on title change). `SaveToBranchAsync` writes
-back to `_handle.Identifier` (the path the post was opened from), mirroring the
-LocalFile branch's "write back to where it came from" behavior. `SaveDraftAsync` is
-still around for a future "save as GitHub draft from New" flow.
+**Verification:** TDD red→green (3 new VM tests: local / github / already-gone); full suite **172 passed / 0 failed** (Core 7 · Markdown 66 · GitHub 47 · ViewModels 52); both heads compile clean; deployed via `bun android` (install-over) + field-verified on the Pixel 7.
 
-### `IGitStatusService` grew ops methods, not a sibling interface
+## Next steps (immediate)
 
-The handoff suggested "extend `GitCliStatusService` (or a sibling)". I added
-`CommitAsync/PushAsync/PullAsync` directly to `IGitStatusService` rather than minting a
-new interface — same `GitRunner` plumbing, same shell-out posture, no need for two
-DI registrations. `git pull --ff-only` is deliberate: we refuse silent auto-merges of a
-diverged history; the user resolves that in their git client. `git commit` exiting
-non-zero with "nothing to commit" is treated as benign success (otherwise the chip
-flashes red for a no-op).
+_Status 2026-06-05: items 1 and 2 are DONE (operator pushed origin/develop; app boots clean on the seed branch via shell-wrapped `bun dev`). Kept below as the runbook._
 
-### Android editor bridge — fully documented in CLAUDE.md and `reference-android-hybridwebview-bridge` memory
+1. **Push develop → origin — DONE** (was ahead 2): `git -C C:/Users/Chris/Documents/GitHub/PostXING push origin develop`. No CI gate on develop, so it's a quiet publish.
+2. **Live app run, the right way** (also the only way to *see* the seeded fields):
+   ```powershell
+   Rename-Item "$env:APPDATA\PostXING\settings.json" settings.json.bak   # force the seed branch
+   bun dev                                                               # Settings should show blog / ChrisPelatari / main / Chris Pelatari
+   # close the app, then restore:
+   Rename-Item "$env:APPDATA\PostXING\settings.json.bak" settings.json
+   ```
+   NB: do **not** launch bun via `Start-Process bun` — on Windows `bun` is a shim, so it fails with
+   *"%1 is not a valid Win32 application."* Run `bun dev` directly in a shell.
+3. *(optional)* Add a short CLAUDE.md note on the `defaults.local.json` seed mechanism (today it's
+   self-documented only via `defaults.local.example.json` + the `.gitignore` comment).
 
-The IME composition issue (pass 2) added a real load-bearing rule on top: **do not touch
-`editor.innerHTML` while a composition is active**. This is now baked into
-`Resources/Raw/editor/index.html`'s `input` handler. The `compositionend` hook is what runs
-the deferred rehighlight + post + scrollCaretIntoView.
+## Carried-forward open verifies (from 2026-05-30 — status UNCONFIRMED this session)
 
-The `--vv-h` visualViewport sizing (pass 3) is the same pattern most mobile-first editor
-shells use; if you ever wonder why `100vh` "should work", the answer is that Android WebView
-historically doesn't shrink the layout viewport on AdjustResize, so `100vh` lies about the
-visible area when the IME is open. `visualViewport.height` does not lie.
+Operator-driven; none exercisable from the test suite. Re-confirm whether still open before acting.
 
-## Hard-won knowledge (still load-bearing)
+- **SAF non-Termux folder trees.** Pick a primary-external folder (`Documents/`, `Downloads/`) →
+  New → type → Save → reopen still persists. The hand-rolled `ActionOpenDocumentTree` +
+  `MainActivity.OnActivityResult` works for the Termux provider; if a system DocumentsProvider
+  doesn't route back, switch to `ComponentActivity.RegisterForActivityResult` (MAUI's own
+  `FolderPicker` was absent in 10.0.20 — `CS0103`).
+- **Android editor viewport (pass 3).** Long body past the IME stays visible while typing; Enter
+  makes a real newline; cursor follows. Trace: `adb logcat -s PXBRIDGE` + `window.PostXING.getDiag()`.
+- **Windows publish flow against a real repo.** Draft → Publish → "open PR only" → a real PR on the
+  configured Owner/Repo vs `DevelopBranch`; status line `PR #N opened on post/<slug>-<date>`.
+- **Windows sync chip on a real git repo.** Local Posts Folder = a real repo → chip → commit & push
+  via `GitCliStatusService.CommitAsync/PushAsync`; pull is `--ff-only` (refuses diverged auto-merge).
 
-- **MAUI HybridWebView's JS↔host raw bridge is dead on Android (10.0.20):** `window.HybridWebView`
-  never injects; `SendRawMessage` / `RawMessageReceived` never fire. Host→JS uses
-  **fire-and-forget `EvaluateJavaScriptAsync`** (the JS runs even though the awaited Task hangs);
-  JS→host uses `EvaluateJavaScriptAsync` **return value** of `window.PostXING.getText()`, which
-  is safe once the page is stable (hangs *during* load). See `Views/EditorPage.xaml.cs`
-  `#if ANDROID` and the CLAUDE.md Android notes.
-- **Fast-deploy gremlin:** a stale `.__override__` dir leaves a blank PhoenixBlue screen.
-  `bun android` (`scripts/android.ps1`) now `adb uninstall`s first + builds embedded
-  (`-p:EmbedAssembliesIntoApk=true`). If you ever see blue: `adb uninstall net.bluefenix.postxing`
-  and redeploy.
-- **Android versionCode** is `minor*10_000_000 + patch*1_000 + build` (monotonic, < 2^31),
-  computed by `android.ps1` from `.version`.
-- **adb** is at `C:\Program Files (x86)\Android\android-sdk\platform-tools\adb.exe` (not on
-  PATH). Bridge trace → logcat tag `PXBRIDGE` (`adb logcat -s PXBRIDGE`).
-- **Multi-target:** `dotnet run` needs `-f net10.0-windows10.0.19041.0`; `bun dev`/`dev:build`
-  build Windows-only; `bun android` deploys the phone; `bun run build` is the full-graph
-  (both heads) CI build.
+## Durable knowledge (load-bearing — kept reconciled with CLAUDE.md)
+
+- **#10 seed is SYNCHRONOUS on purpose.** `FileSystemSettingsStore.ReadEmbeddedSeed` +
+  `SettingsSeed.ParseOrDefault` use sync I/O (`StreamReader.ReadToEnd`, `JsonSerializer.Deserialize`)
+  because `LoadAsync` must stay synchronous — it's DI-resolved via a blocking
+  `GetAwaiter().GetResult()` during `App` construction. An awaited async read there deadlocks (next
+  bullet). Don't "async-ify" the seed path. `defaults.local.json` is **per-checkout** (gitignored):
+  present in both the main develop checkout and this worktree; absent on a public clone / CI → neutral
+  defaults.
+- **Blank PhoenixBlue splash = startup DEADLOCK, not stale fast-deploy state.** The `.__override__`
+  theory was a 2026-06-03 red herring (corrected in CLAUDE.md, commit `72552d8`). Cause: `ISettingsStore`
+  is resolved via a blocking `LoadAsync().GetAwaiter().GetResult()`, and once `App`'s ctor took an
+  `ISettingsStore` dep (to apply the saved theme) that resolve runs on the main thread during App
+  construction — an awaited async read (`DeserializeAsync`) deadlocks whenever a `settings.json`
+  already exists. Fix: `LoadAsync` is synchronous (`File.ReadAllText` + `Deserialize`). Tell: rendered
+  on a fresh install (no file → early return), blanked once settings existed. **Diagnose a blue screen
+  with `adb logcat -d --pid <pid>`** — a managed `FATAL EXCEPTION` points at startup code; mono loading
+  then silence = a main-thread hang/deadlock like this one. `bun android` installs **over** the app
+  (preserves in-app settings / PAT / SAF grant); `bun android:clean` uninstalls (resets them) and is
+  only for genuine device-side stale state — read logcat before reaching for it.
+- **MAUI HybridWebView JS↔host raw bridge is dead on Android (10.0.20):** `window.HybridWebView`
+  never injects; `SendRawMessage`/`RawMessageReceived` never fire. Host→JS uses **fire-and-forget
+  `EvaluateJavaScriptAsync`** (JS runs even though the awaited Task hangs during load); JS→host uses
+  the **return value** of `EvaluateJavaScriptAsync("window.PostXING.getText()")` (safe once the page
+  is stable). See `Views/EditorPage.xaml.cs` `#if ANDROID`; trace tag `PXBRIDGE`.
 - **Contenteditable must be `plaintext-only` + composition-guarded.** Don't revert to
-  `contenteditable="true"` without re-thinking IME handling; the title-prompt seed and
-  the rehighlight pipeline depend on plain-text editing.
+  `contenteditable="true"`: rehighlight must not touch `editor.innerHTML` while an IME composition is
+  active (it was aborting dictation + dropping Enter). `compositionend` runs the deferred rehighlight.
+- **Android `versionCode`** = `minor*10_000_000 + patch*1_000 + build` (monotonic, < 2^31), from
+  `.version` by `scripts/android.ps1`.
+- **adb** is at `C:\Program Files (x86)\Android\android-sdk\platform-tools\adb.exe` (not on PATH).
+- **Multi-target:** `dotnet run` needs `-f net10.0-windows10.0.19041.0`; `bun dev`/`dev:build` build
+  Windows-only; `bun android` deploys the phone; `bun run build` is the full-graph (both heads) CI build.
+
+## Architecture notes (durable)
+
+- **Save-to-GitHub writes back to where the post came from.** `EditorViewModel` SaveAsync's GH branch
+  uses `GitHubPublishService.SaveToBranchAsync(site, path, content, msg)` (writes to the opened
+  `_handle.Identifier`), not `SaveDraftAsync` (which hard-codes `drafts/{slug}.md` and would re-route a
+  `posts/` edit). `SaveDraftAsync` remains for a future "save as GitHub draft from New" flow.
+- **`IGitStatusService` carries the git ops** (`CommitAsync/PushAsync/PullAsync` + `GitOperationResult`),
+  not a sibling interface — same `GitRunner` shell-out. `git pull --ff-only` is deliberate (no silent
+  diverged-merge); `git commit` "nothing to commit" is benign success (no red chip on a no-op).
+- **Android editor `--vv-h`.** `#editor` height tracks `window.visualViewport.height` via a CSS custom
+  property, because Android WebView doesn't shrink the layout viewport on AdjustResize, so `100vh` lies
+  when the IME is open. `scrollCaretIntoView()` is `requestAnimationFrame`-wrapped with a rect fallback.
 
 ## Build / run / test / deploy
 
 ```powershell
-dotnet run -f net10.0-windows10.0.19041.0   # Windows app
+dotnet run -f net10.0-windows10.0.19041.0   # Windows app (-f required: multi-target)
 bun dev          # fast Windows relaunch (no rebuild)
 bun dev:build    # Windows incremental build + launch (after edits)
-bun android      # clean build + deploy to the connected Pixel 7 (USB debugging on)
+bun android      # build + deploy OVER the app on the connected Pixel 7 (keeps settings)
+bun android:clean# uninstall (RESETS settings) + wipe obj/bin — rare escape hatch
 bun run build    # full slnx Release, both heads (CI parity)
-bun xunit        # 113 tests
-gh workflow run CI --ref develop   # run CI on demand (CI auto-fires only on main/stage)
+bun xunit        # 172 tests
+gh workflow run CI --ref develop   # CI on demand (auto-fires only on main/stage)
 ```
+
+## Safety / cleanup (this session)
+
+- App settings were moved aside to exercise the seed branch and **restored** — `%APPDATA%\PostXING\settings.json` is unchanged.
+- Backups remain at `%TEMP%\postxing-merge-backup\` (`defaults.local.json`, `settings.local.json`, `appdata-settings.json`) — delete when satisfied.
+- This `HANDOFF.md` is **untracked** (not committed to develop).
 
 ## Pointers
 
-- `CLAUDE.md` — canonical project doc (Android notes, branch model, hard rules).
-- `~/.claude/plans/can-maui-be-deployed-tranquil-badger.md` — the A/B/C/D design that
-  drove this arc; A and D are landed, B/C were not on the table this session.
-- homelab-topology journal: `journal/2026-05-30-postxing-android-port.md`.
-- Memory: `project-android-port`, `reference-android-hybridwebview-bridge`.
+- `CLAUDE.md` — canonical project doc (Android notes, branch model, hard rules, version stamping).
+- `~/.claude/plans/can-maui-be-deployed-tranquil-badger.md` — the A/B/C/D design behind the Android arc (A + D landed).
+- homelab-topology journal: `journal/` (e.g. `2026-05-30-postxing-android-port.md`).
+- Memories: `project-android-port`, `reference-android-hybridwebview-bridge`.

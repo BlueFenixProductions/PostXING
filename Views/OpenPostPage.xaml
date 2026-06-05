@@ -58,14 +58,29 @@
                         SemanticProperties.Description="Available posts">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:PostEntry">
-                    <Grid Padding="8,4" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                        <Label Grid.Column="0" Text="{Binding DisplayName}" FontSize="13" FontFamily="HackRegular"
-                               TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
-                        <Label Grid.Column="1" Text="{Binding Tag}" FontSize="11" FontFamily="HackRegular"
-                               CharacterSpacing="2"
-                               TextColor="{AppThemeBinding Light={StaticResource Paper600}, Dark={StaticResource Paper500}}"
-                               VerticalOptions="Center" />
-                    </Grid>
+                    <!-- Swipe a row left to reveal Delete (idiomatic on Android; also works on
+                         Windows via drag). Tap still opens the post - SwipeView passes taps through
+                         to its content, so there's no tap-vs-select conflict. The inner Grid needs an
+                         opaque background or the row content shows through the revealed delete item. -->
+                    <SwipeView>
+                        <SwipeView.RightItems>
+                            <SwipeItems Mode="Reveal">
+                                <SwipeItem Text="delete"
+                                           BackgroundColor="#B3261E"
+                                           CommandParameter="{Binding .}"
+                                           Invoked="OnDeleteSwipeInvoked" />
+                            </SwipeItems>
+                        </SwipeView.RightItems>
+                        <Grid Padding="8,4" ColumnDefinitions="*,Auto" ColumnSpacing="12"
+                              BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}">
+                            <Label Grid.Column="0" Text="{Binding DisplayName}" FontSize="13" FontFamily="HackRegular"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
+                            <Label Grid.Column="1" Text="{Binding Tag}" FontSize="11" FontFamily="HackRegular"
+                                   CharacterSpacing="2"
+                                   TextColor="{AppThemeBinding Light={StaticResource Paper600}, Dark={StaticResource Paper500}}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </SwipeView>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
