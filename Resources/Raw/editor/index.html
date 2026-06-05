@@ -749,20 +749,30 @@ html, body {
     setCaretOffset(editor, offset);
   }
 
-  // Keep the editor sized to the visual viewport (the actual visible area, excluding the
-  // Android soft keyboard). Without this, AdjustResize doesn't always shrink the WebView's
-  // layout viewport, and content scrolls "off the bottom" behind the keyboard.
+  // Keep the editor sized to the actual visible area above the Android soft keyboard. The visual
+  // viewport does NOT shrink for the soft keyboard on the Android WebView (measured: innerHeight,
+  // visualViewport.height and this var all stay full-height whether the keyboard is up or down), so
+  // the JS can't detect the keyboard on its own. Instead the Android host reads the IME inset
+  // natively and pushes it here (in device px) via setKeyboardInsetPx; we subtract it from
+  // innerHeight. On Windows hostInsetPx stays 0 and we use the visual viewport height unchanged
+  // (there's no soft keyboard to exclude there).
+  let hostInsetPx = 0;   // soft-keyboard height in *device* px, pushed by the Android host (0 = hidden)
   function syncEditorHeight() {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    document.documentElement.style.setProperty('--vv-h', vv.height + 'px');
+    let h;
+    if (hostInsetPx > 0) {
+      const dpr = window.devicePixelRatio || 1;
+      h = Math.max(120, window.innerHeight - hostInsetPx / dpr);
+    } else {
+      h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    }
+    document.documentElement.style.setProperty('--vv-h', h + 'px');
   }
   syncEditorHeight();
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', () => {
       syncEditorHeight();
-      // Once the keyboard finishes appearing, bring the caret back into view; a frame's
-      // delay so the new height has been applied and rects are fresh.
+      // Once the new height is applied, bring the caret back into view; a frame's delay so the
+      // height has taken effect and the rects are fresh.
       requestAnimationFrame(scrollCaretIntoView);
     });
   }
@@ -843,6 +853,19 @@ html, body {
     scheduleOutgoing();
   });
 
+  // Keep the caret visible as it moves — typing, newlines, arrows, taps — regardless of IME
+  // composition state. The input handler above defers to compositionend while composing, which
+  // would otherwise let the caret slide behind the keyboard mid-word; selectionchange fires on
+  // every caret move, so it covers that gap. Throttled to one frame.
+  let caretScrollScheduled = false;
+  document.addEventListener('selectionchange', () => {
+    if (caretScrollScheduled) return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !editor.contains(sel.anchorNode)) return;
+    caretScrollScheduled = true;
+    requestAnimationFrame(() => { caretScrollScheduled = false; scrollCaretIntoView(); });
+  });
+
   // Paste as plain text (strip styles from the OS clipboard).
   editor.addEventListener('paste', (e) => {
     e.preventDefault();
@@ -908,6 +931,14 @@ html, body {
     },
     focus() {
       editor.focus();
+    },
+    // Android host -> JS: the soft-keyboard height in device px (0 when hidden). The visual viewport
+    // doesn't shrink for the keyboard on the Android WebView, so this is the only reliable signal;
+    // we resize the editor to the visible area above the keyboard and pull the caret back into view.
+    setKeyboardInsetPx(px) {
+      hostInsetPx = (typeof px === 'number' && px > 0) ? px : 0;
+      syncEditorHeight();
+      requestAnimationFrame(scrollCaretIntoView);
     },
     getText() {
       return editor.innerText;
