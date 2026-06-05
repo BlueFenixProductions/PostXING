@@ -96,6 +96,17 @@ public sealed class SafLocalPostStore : ILocalPostStore
         }, ct).ConfigureAwait(false);
     }
 
+    public async Task DeleteAsync(string id, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(id)) throw new ArgumentException("Empty document id.", nameof(id));
+        var uri = AndroidUri.Parse(id) ?? throw new ArgumentException("Not a content URI.", nameof(id));
+        await Task.Run(() =>
+        {
+            if (!DocumentsContract.DeleteDocument(Resolver, uri))
+                throw new IOException($"Provider refused to delete {id}.");
+        }, ct).ConfigureAwait(false);
+    }
+
     public async Task<string> CreateAsync(string folder, string relativePath, string contents, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(folder)) throw new ArgumentException("Empty tree URI.", nameof(folder));

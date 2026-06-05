@@ -67,7 +67,23 @@
       "Bash(git push *)",
       "PowerShell($adb = \"C:\\\\Program Files \\(x86\\)\\\\Android\\\\android-sdk\\\\platform-tools\\\\adb.exe\"; & $adb shell input keyevent 4; Start-Sleep -Milliseconds 700; & $adb shell input tap 1014 226; Start-Sleep -Milliseconds 700; & $adb shell input tap 612 250; Start-Sleep -Milliseconds 1100; & $adb shell input tap 540 1246; Start-Sleep -Milliseconds 600; & $adb shell input text \"PostXING%sLive%sWrite%sTest\"; Start-Sleep -Milliseconds 400; & $adb shell input keyevent 4; Start-Sleep -Milliseconds 500; & $adb shell input tap 716 2118; Start-Sleep -Milliseconds 1500; & $adb shell screencap -p /sdcard/px_screen.png; & $adb pull /sdcard/px_screen.png \"$env:TEMP\\\\px_screen.png\" | Out-Null; Write-Output \"captured\")",
       "PowerShell($adb = \"C:\\\\Program Files \\(x86\\)\\\\Android\\\\android-sdk\\\\platform-tools\\\\adb.exe\"; & $adb shell input tap 761 698; Write-Output \"tapped Publish; waiting for HTTP round-trips...\"; Start-Sleep -Milliseconds 6000; & $adb logcat -d 2>$null | Select-String -Pattern \"PXBRIDGE|Exception|FATAL|GitHub|Publish\" | Select-Object -Last 6)",
-      "Bash(curl -s https://api.github.com/repos/ChrisPelatari/vitepress.chris.pelatari.com/branches?per_page=100)"
+      "Bash(curl -s https://api.github.com/repos/ChrisPelatari/vitepress.chris.pelatari.com/branches?per_page=100)",
+      "Bash(gh issue *)",
+      "PowerShell(dotnet test solution/PostXING4.slnx --nologo -v q 2>&1)",
+      "PowerShell(dotnet build -f net10.0-windows10.0.19041.0 --nologo -v q 2>&1)",
+      "Bash(git rev-list *)",
+      "Bash(git -C \"C:/Users/Chris/Documents/GitHub/PostXING\" status --short --branch)",
+      "Bash(git -C C:/Users/Chris/Documents/GitHub/PostXING merge --ff-only claude/practical-ptolemy-ce845a)",
+      "Bash(git -C C:/Users/Chris/Documents/GitHub/PostXING log --oneline -4)",
+      "Bash(git -C C:/Users/Chris/Documents/GitHub/PostXING status --short --branch)",
+      "Bash(cp defaults.local.json C:/Users/Chris/Documents/GitHub/PostXING/defaults.local.json)",
+      "Bash(git -C C:/Users/Chris/Documents/GitHub/PostXING check-ignore defaults.local.json)",
+      "Bash(git -C C:/Users/Chris/Documents/GitHub/PostXING push origin develop)",
+      "Bash(git -C C:/Users/Chris/Documents/GitHub/PostXING status -sb)",
+      "Bash(git -C \"C:/Users/Chris/Documents/GitHub/PostXING/.claude/worktrees/practical-ptolemy-ce845a\" log --oneline -4)",
+      "Bash(git -C \"C:/Users/Chris/Documents/GitHub/PostXING/.claude/worktrees/practical-ptolemy-ce845a\" status --short)",
+      "Bash(git -C \"C:/Users/Chris/Documents/GitHub/PostXING\" log --oneline -4)",
+      "Bash(git -C \"C:/Users/Chris/Documents/GitHub/PostXING\" status -sb)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Chris\\Documents\\GitHub\\PostXING-decompiled\\.git"

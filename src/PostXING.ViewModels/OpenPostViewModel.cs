@@ -195,6 +195,40 @@ public sealed partial class OpenPostViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
+    // Delete the selected post. Confirmation lives in the page (the VM can't show dialogs); by the
+    // time we're here the user has confirmed. Local files delete directly; GitHub files (draft or
+    // post) delete via a single commit to the integration branch, which needs the current blob sha.
+    [RelayCommand]
+    private async Task DeleteAsync(PostEntry? entry)
+    {
+        if (entry is null) return;
+        IsBusy = true;
+        try
+        {
+            if (entry.Source == PostSource.LocalFile)
+            {
+                await _local.DeleteAsync(entry.Identifier);
+            }
+            else
+            {
+                var s = _settings.Current;
+                if (!s.IsGitHubConfigured) { StatusMessage = "No GitHub repo configured."; return; }
+                var sha = await _gateway.GetFileShaAsync(s.Owner!, s.Repo!, s.DevelopBranch, entry.Identifier);
+                // A null sha means it's already gone on the remote — drop the stale row, don't commit.
+                if (sha is not null)
+                    await _gateway.DeleteFileAsync(s.Owner!, s.Repo!, s.DevelopBranch, entry.Identifier,
+                        $"Delete {entry.DisplayName}", sha);
+            }
+            Entries.Remove(entry);
+            StatusMessage = $"Deleted {entry.DisplayName}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Delete failed: {ex.Message}";
+        }
+        finally { IsBusy = false; }
+    }
+
     [RelayCommand]
     private void OpenSettings()
     {

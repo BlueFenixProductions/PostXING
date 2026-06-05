@@ -78,6 +78,17 @@ public sealed class GhCliGitHubGateway(ILogger<GhCliGitHubGateway> log, string g
         if (exit != 0) throw GhException($"upsert file {path}", exit, stderr);
     }
 
+    public async Task DeleteFileAsync(string owner, string repo, string branch, string path, string commitMessage, string fileSha, CancellationToken ct = default)
+    {
+        var (exit, _, stderr) = await RunAsync(
+            ["api", "-X", "DELETE", $"repos/{owner}/{repo}/contents/{path}",
+             "-f", $"message={commitMessage}",
+             "-f", $"sha={fileSha}",
+             "-f", $"branch={branch}"],
+            stdin: null, ct);
+        if (exit != 0) throw GhException($"delete file {path}", exit, stderr);
+    }
+
     public async Task<int> OpenPullRequestAsync(string owner, string repo, string headBranch, string baseBranch, string title, string body, CancellationToken ct = default)
     {
         var (exit, stdout, stderr) = await RunAsync(

@@ -1,3 +1,4 @@
+using PostXING.Core.Domain;
 using PostXING.ViewModels;
 
 namespace PostXING.App.Views;
@@ -32,6 +33,18 @@ public partial class OpenPostPage : ContentPage
         // Clear so the same row can be tapped again later if needed.
         if (sender is CollectionView cv)
             cv.SelectedItem = null;
+    }
+
+    // Swipe-to-delete on a list row -> confirm (destructive) -> the VM does the actual delete.
+    private async void OnDeleteSwipeInvoked(object? sender, EventArgs e)
+    {
+        if (sender is not SwipeItem item || item.CommandParameter is not PostEntry entry) return;
+        var detail = entry.Source == PostSource.GitHub
+            ? "This commits a deletion to your GitHub repo. It can't be undone from the app."
+            : "This permanently deletes the local file.";
+        var ok = await DisplayAlertAsync("Delete post?", $"{entry.DisplayName}\n\n{detail}", "delete", "cancel");
+        if (!ok) return;
+        await _vm.DeleteCommand.ExecuteAsync(entry);
     }
 
     // Sync chip action sheet — mirrors EditorPage so the Open page can drive the same set of

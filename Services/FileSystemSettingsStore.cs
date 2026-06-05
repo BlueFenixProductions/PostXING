@@ -41,7 +41,14 @@ public sealed class FileSystemSettingsStore : ISettingsStore
         // (DeserializeAsync) deadlocks the main thread whenever a settings.json already exists,
         // leaving the app stuck on the blue splash. The file is tiny; a sync read is correct and
         // deadlock-free.
-        if (!File.Exists(_path)) return Task.CompletedTask;
+        if (!File.Exists(_path))
+        {
+            // No settings yet (fresh install / post-wipe): seed from the embedded per-developer
+            // defaults if one was baked in, else stay on AppSettings.Default. Nothing is written to
+            // disk here - the seeded values become Current and persist on the first Save.
+            _current = SettingsSeed.ParseOrDefault(ReadEmbeddedSeed());
+            return Task.CompletedTask;
+        }
         try
         {
             var json = File.ReadAllText(_path);
@@ -57,6 +64,19 @@ public sealed class FileSystemSettingsStore : ISettingsStore
             // Corrupt settings file; keep defaults.
         }
         return Task.CompletedTask;
+    }
+
+    // Reads the per-developer first-run seed baked in from a gitignored defaults.local.json (see
+    // PostXING.App.csproj). Returns null on a public clone / CI build where no seed was embedded, so
+    // the caller falls back to AppSettings.Default. Synchronous to honor LoadAsync's deadlock-safe
+    // contract (it runs via a blocking resolve on the main thread during App construction).
+    private static string? ReadEmbeddedSeed()
+    {
+        using var stream = typeof(FileSystemSettingsStore).Assembly
+            .GetManifestResourceStream("PostXING.App.defaults.local.json");
+        if (stream is null) return null;
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 
     public async Task SaveAsync(AppSettings settings, CancellationToken ct = default)
