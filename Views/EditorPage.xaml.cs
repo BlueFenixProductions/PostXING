@@ -78,7 +78,7 @@ public partial class EditorPage : ContentPage
 
 #if ANDROID
         // Android's JS->host bridge can't live-sync edits, so pull the editor text on save.
-        vm.SyncBeforeSaveAsync = SyncEditorTextBeforeSaveAsync;
+        vm.SyncBeforeSaveAsync = () => SyncEditorTextBeforeSaveAsync();
 #endif
 
         // HybridWebView serves Resources/Raw/editor (HybridRoot) and exposes a raw
@@ -97,6 +97,17 @@ public partial class EditorPage : ContentPage
         _ = _vm.RefreshAuthAsync();
         _ = _vm.RefreshSyncAsync(fetch: true);   // background git fetch + recompute the sync chip
         _ = SeedEditorAsync();
+#if ANDROID
+        StartDirtyPoll();
+#endif
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+#if ANDROID
+        StopDirtyPoll();
+#endif
     }
 
     // The page loads asynchronously and the JS->host bridge is dead on Android, so there's no
@@ -238,26 +249,64 @@ public partial class EditorPage : ContentPage
     }
 
 #if ANDROID
+    // The JS->host bridge is dead on Android, so a keystroke can't push a 'dirty' signal the way
+    // it does on desktop (RawMessageReceived "change"). Instead, poll the editor text on a timer
+    // while the page is visible: when it diverges from RawMarkdown, SyncEditorTextBeforeSaveAsync
+    // mirrors it into the ViewModel, which flips IsDirty (OnRawMarkdownChanged) and enables
+    // Save/Publish — and keeps the word-count/reading-time live as a bonus.
+    private IDispatcherTimer? _dirtyPollTimer;
+    private bool _dirtyPollBusy;
+
+    private void StartDirtyPoll()
+    {
+        if (_dirtyPollTimer is not null) return;
+        _dirtyPollTimer = Dispatcher.CreateTimer();
+        _dirtyPollTimer.Interval = TimeSpan.FromMilliseconds(750);
+        _dirtyPollTimer.Tick += OnDirtyPollTick;
+        _dirtyPollTimer.Start();
+    }
+
+    private void StopDirtyPoll()
+    {
+        if (_dirtyPollTimer is null) return;
+        _dirtyPollTimer.Stop();
+        _dirtyPollTimer.Tick -= OnDirtyPollTick;
+        _dirtyPollTimer = null;
+    }
+
+    // Non-reentrant: a tick's eval can outlast the interval (it has a defensive timeout), so skip
+    // a tick while the previous pull is still in flight rather than piling up overlapping evals.
+    private async void OnDirtyPollTick(object? sender, EventArgs e)
+    {
+        if (_dirtyPollBusy) return;
+        _dirtyPollBusy = true;
+        try { await SyncEditorTextBeforeSaveAsync(fromPoll: true); }
+        finally { _dirtyPollBusy = false; }
+    }
+
     // Pull the editor's current text via EvaluateJavaScriptAsync (which returns at stable times,
-    // unlike during page load) into the ViewModel before saving. Echo push-back is suppressed,
-    // and it times out defensively so Save never blocks if eval hangs.
-    private async Task SyncEditorTextBeforeSaveAsync()
+    // unlike during page load) into the ViewModel. Echo push-back is suppressed, and it times out
+    // defensively so it never blocks if eval hangs. Used both before an explicit Save/Preview and
+    // by the dirty-poll timer (fromPoll); the poll path refuses to let a spurious empty read wipe a
+    // non-empty doc, while an explicit save still honors an intentionally emptied editor.
+    private async Task SyncEditorTextBeforeSaveAsync(bool fromPoll = false)
     {
         try
         {
             var evalTask = MainThread.InvokeOnMainThreadAsync(
                 () => EditorWebView.EvaluateJavaScriptAsync("window.PostXING.getText()"));
             var done = await Task.WhenAny(evalTask, Task.Delay(2500));
-            if (done != evalTask) { BridgeLog.Write("SyncBeforeSave: getText timed out"); return; }
+            if (done != evalTask) { if (!fromPoll) BridgeLog.Write("SyncBeforeSave: getText timed out"); return; }
 
             var text = DecodeEvalString(evalTask.Result);
             if (text == _vm.RawMarkdown) return;
+            if (fromPoll && string.IsNullOrEmpty(text) && !string.IsNullOrEmpty(_vm.RawMarkdown)) return;
 
             _lastSyncedText = text;
             _suppressOutgoingPropertyChanged = true;
             try { _vm.RawMarkdown = text; }
             finally { _suppressOutgoingPropertyChanged = false; }
-            BridgeLog.Write($"SyncBeforeSave pulled {text.Length} chars");
+            if (!fromPoll) BridgeLog.Write($"SyncBeforeSave pulled {text.Length} chars");
         }
         catch (Exception ex) { BridgeLog.Write($"SyncBeforeSave threw {ex.GetType().Name}: {ex.Message}"); }
     }
