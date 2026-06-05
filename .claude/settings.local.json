@@ -79,7 +79,11 @@
       "Bash(cp defaults.local.json C:/Users/Chris/Documents/GitHub/PostXING/defaults.local.json)",
       "Bash(git -C C:/Users/Chris/Documents/GitHub/PostXING check-ignore defaults.local.json)",
       "Bash(git -C C:/Users/Chris/Documents/GitHub/PostXING push origin develop)",
-      "Bash(git -C C:/Users/Chris/Documents/GitHub/PostXING status -sb)"
+      "Bash(git -C C:/Users/Chris/Documents/GitHub/PostXING status -sb)",
+      "Bash(git -C \"C:/Users/Chris/Documents/GitHub/PostXING/.claude/worktrees/practical-ptolemy-ce845a\" log --oneline -4)",
+      "Bash(git -C \"C:/Users/Chris/Documents/GitHub/PostXING/.claude/worktrees/practical-ptolemy-ce845a\" status --short)",
+      "Bash(git -C \"C:/Users/Chris/Documents/GitHub/PostXING\" log --oneline -4)",
+      "Bash(git -C \"C:/Users/Chris/Documents/GitHub/PostXING\" status -sb)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Chris\\Documents\\GitHub\\PostXING-decompiled\\.git"
