@@ -35,6 +35,9 @@ public sealed class OpenPostViewModelTests
         { "posts/2026-01-05-old.md", "posts/2026-05-20-new.md" };
     private static readonly string[] GitHubEntriesNewestFirst =
         { "posts/2026-05-20-new.md", "posts/2026-01-05-old.md", "drafts/wip.md" };
+    // Single-entry setups for the delete tests, hoisted for the same CA1861 reason.
+    private static readonly string[] GitHubPostToDelete = { "posts/2026-05-20-new.md" };
+    private static readonly string[] GitHubDraftToDelete = { "drafts/stale.md" };
 
     [Fact]
     public async Task Selecting_a_post_hands_it_off_and_navigates_exactly_once()
@@ -221,7 +224,7 @@ public sealed class OpenPostViewModelTests
         var (vm, gateway, settings, _) = CreateVm();
         settings.Current.Returns(AppSettings.Default with { Owner = "o", Repo = "r" }); // DevelopBranch = develop
         gateway.ListMarkdownFilesAsync("o", "r", "develop", "drafts/").Returns(Array.Empty<string>());
-        gateway.ListMarkdownFilesAsync("o", "r", "develop", "posts/").Returns(new[] { "posts/2026-05-20-new.md" });
+        gateway.ListMarkdownFilesAsync("o", "r", "develop", "posts/").Returns(GitHubPostToDelete);
         gateway.GetFileShaAsync("o", "r", "develop", "posts/2026-05-20-new.md").Returns("sha-123");
         await vm.RefreshAsync();
         var entry = vm.Entries.Single();
@@ -237,7 +240,7 @@ public sealed class OpenPostViewModelTests
     {
         var (vm, gateway, settings, _) = CreateVm();
         settings.Current.Returns(AppSettings.Default with { Owner = "o", Repo = "r" });
-        gateway.ListMarkdownFilesAsync("o", "r", "develop", "drafts/").Returns(new[] { "drafts/stale.md" });
+        gateway.ListMarkdownFilesAsync("o", "r", "develop", "drafts/").Returns(GitHubDraftToDelete);
         gateway.ListMarkdownFilesAsync("o", "r", "develop", "posts/").Returns(Array.Empty<string>());
         gateway.GetFileShaAsync("o", "r", "develop", "drafts/stale.md").Returns((string?)null);
         await vm.RefreshAsync();
