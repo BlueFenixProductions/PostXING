@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="PostXING.App.Views.AboutPage"
-             BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
+             BackgroundColor="{DynamicResource Surface}"
              Shell.NavBarIsVisible="False"
              Title="About">
   <Grid RowDefinitions="*,Auto">
@@ -16,7 +16,7 @@
         <HorizontalStackLayout Spacing="16">
           <Label Text="PostXING" FontFamily="HackBold" FontSize="40"
                  VerticalOptions="Center"
-                 TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper100}}"
+                 TextColor="{DynamicResource OnSurfaceStrong}"
                  SemanticProperties.HeadingLevel="Level2" />
           <Border WidthRequest="64" HeightRequest="64" StrokeThickness="0"
                   BackgroundColor="{StaticResource Ink1000}"
@@ -41,7 +41,7 @@
         </HorizontalStackLayout>
         <Label Text="A blog editor reborn &#8212; from 2007 WinForms to .NET 10."
                FontFamily="HackRegular" FontSize="14"
-               TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
+               TextColor="{DynamicResource KickerAccent}" />
         <Label x:Name="VersionLabel" Style="{StaticResource StatusBarRead}" />
 
         <BoxView Style="{StaticResource Hairline}" />
@@ -50,7 +50,7 @@
         <Label Style="{StaticResource Kicker}" Text="[ heritage ]"
                SemanticProperties.HeadingLevel="Level2" />
         <Label FontFamily="HackRegular" FontSize="13"
-               TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
+               TextColor="{DynamicResource OnSurface}"
                Text="The original PostXING shipped in 2007 as a WinForms desktop blog editor. This is a ground-up .NET 10 MAUI rewrite of that spirit, built around a Markdown + GitHub + static-site workflow &#8212; local files first, the gh CLI when you want it." />
 
         <BoxView Style="{StaticResource Hairline}" />
@@ -59,7 +59,7 @@
         <Label Style="{StaticResource Kicker}" Text="[ producer ]"
                SemanticProperties.HeadingLevel="Level2" />
         <Label FontFamily="HackRegular" FontSize="13"
-               TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
+               TextColor="{DynamicResource OnSurface}"
                Text="Blue Fenix Productions LLC" />
         <Label Style="{StaticResource FieldCaption}" Text="net.bluefenix.postxing" />
         <Label Style="{StaticResource FieldCaption}" Text="&#169; 2026 Blue Fenix Productions LLC" />

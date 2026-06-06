@@ -3,7 +3,9 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Storage;
+using PostXING.App.Services;
 using PostXING.ViewModels;
+using PostXING.ViewModels.Theming;
 
 namespace PostXING.App.Views;
 
@@ -48,16 +50,18 @@ public partial class EditorPage : ContentPage
     private readonly EditorViewModel _vm;
     private readonly IPendingPostBox _box;
     private readonly IPreviewBox _previewBox;
+    private readonly IThemeApplicator _themes;
 
     private string _lastSyncedText = string.Empty;
     private bool _suppressOutgoingPropertyChanged;
 
-    public EditorPage(EditorViewModel vm, IPendingPostBox box, IPreviewBox previewBox)
+    public EditorPage(EditorViewModel vm, IPendingPostBox box, IPreviewBox previewBox, IThemeApplicator themes)
     {
         InitializeComponent();
         BindingContext = _vm = vm;
         _box = box;
         _previewBox = previewBox;
+        _themes = themes;
 
         // Open is the Shell root and the editor is pushed on top of it, so "open" pops
         // back to the home screen rather than pushing a second copy of it.
@@ -84,14 +88,13 @@ public partial class EditorPage : ContentPage
         // HybridWebView serves Resources/Raw/editor (HybridRoot) and exposes a raw
         // message channel on both Windows and Android. JS -> host arrives here.
         EditorWebView.RawMessageReceived += OnRawMessageReceived;
-
-        if (Application.Current is not null)
-            Application.Current.RequestedThemeChanged += OnAppThemeChanged;
     }
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        // Re-theme the editor live when the active theme changes; the current palette is seeded below.
+        _themes.EditorPaletteChanged += OnEditorPaletteChanged;
         var pending = _box.Take();
         if (pending is not null) _vm.LoadPost(pending.Handle, pending.Contents);
         _ = _vm.RefreshAuthAsync();
@@ -105,6 +108,7 @@ public partial class EditorPage : ContentPage
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
+        _themes.EditorPaletteChanged -= OnEditorPaletteChanged;
 #if ANDROID
         StopDirtyPoll();
 #endif
@@ -119,7 +123,7 @@ public partial class EditorPage : ContentPage
     {
         for (var i = 0; i < 12; i++)   // ~3s of attempts to cover page load
         {
-            await PushThemeAsync();
+            await PushPaletteAsync(_themes.CurrentEditorPalette);
             await PushTextAsync(_vm.RawMarkdown);
             await Task.Delay(250);
         }
@@ -140,8 +144,8 @@ public partial class EditorPage : ContentPage
 
             if (type == "ready")
             {
-                BridgeLog.Write($"ready received → pushing {_vm.RawMarkdown.Length} chars + theme");
-                await PushThemeAsync();
+                BridgeLog.Write($"ready received → pushing {_vm.RawMarkdown.Length} chars + palette");
+                await PushPaletteAsync(_themes.CurrentEditorPalette);
                 await PushTextAsync(_vm.RawMarkdown);
             }
             else if (type == "change" && root.TryGetProperty("text", out var textEl))
@@ -168,8 +172,8 @@ public partial class EditorPage : ContentPage
         await PushTextAsync(_vm.RawMarkdown);
     }
 
-    private async void OnAppThemeChanged(object? sender, AppThemeChangedEventArgs e) =>
-        await PushThemeAsync();
+    private async void OnEditorPaletteChanged(object? sender, EditorPalette palette) =>
+        await PushPaletteAsync(palette);
 
     private Task PushTextAsync(string text)
     {
@@ -195,13 +199,16 @@ public partial class EditorPage : ContentPage
         return Task.CompletedTask;
     }
 
-    private Task PushThemeAsync()
+    private Task PushPaletteAsync(EditorPalette palette)
     {
-        var theme = Application.Current?.RequestedTheme == AppTheme.Light ? "light" : "dark";
+        // Serialize the 14 editor CSS vars to JSON, then base64 - same pipeline as PushTextAsync, so
+        // the rgba()/unicode values survive the EvaluateJavaScriptAsync round-trip on both heads.
+        var map = new Dictionary<string, string>(palette.ToCssVars());
+        var b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(map)));
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            try { _ = EditorWebView.EvaluateJavaScriptAsync($"if(window.PostXING){{window.PostXING.setTheme('{theme}')}}"); }
-            catch (Exception ex) { BridgeLog.Write($"PushTheme threw {ex.GetType().Name}: {ex.Message}"); }
+            try { _ = EditorWebView.EvaluateJavaScriptAsync($"if(window.PostXING){{window.PostXING.setPaletteB64('{b64}')}}"); }
+            catch (Exception ex) { BridgeLog.Write($"PushPalette threw {ex.GetType().Name}: {ex.Message}"); }
         });
         return Task.CompletedTask;
     }

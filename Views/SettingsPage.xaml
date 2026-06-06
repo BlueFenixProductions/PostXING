@@ -2,47 +2,101 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:PostXING.ViewModels;assembly=PostXING.ViewModels"
+             xmlns:theming="clr-namespace:PostXING.ViewModels.Theming;assembly=PostXING.ViewModels"
              xmlns:shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             xmlns:conv="clr-namespace:PostXING.App.Converters"
              x:Class="PostXING.App.Views.SettingsPage"
              x:DataType="vm:SettingsViewModel"
-             BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
+             BackgroundColor="{DynamicResource Surface}"
              Shell.NavBarIsVisible="False"
              Title="Settings">
+  <ContentPage.Resources>
+    <conv:StringToColorConverter x:Key="StringToColor" />
+  </ContentPage.Resources>
   <ScrollView>
     <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="720" HorizontalOptions="Center">
 
       <Label Style="{StaticResource Kicker}" Text="[ settings ]"
              SemanticProperties.HeadingLevel="Level1" />
 
-      <!-- Theme: a standard platform RadioButton group (native Material on Android, the
-           platform control on Windows) - settings chrome follows platform convention, not the
-           editor's flat-mono idiom. The RadioButtonGroup attached properties bind the group's
-           selected value straight to the Theme enum (no converter); selecting applies
-           instantly and persists (SettingsViewModel.OnThemeChanged). -->
+      <!-- Theme gallery: tap a card to apply instantly (the whole app re-themes). Sync-with-OS
+           auto-flips between the chosen light + dark pair on the device's light/dark setting. -->
       <Label Style="{StaticResource Kicker}" Text="[ theme ]"
              SemanticProperties.HeadingLevel="Level2" />
-      <VerticalStackLayout Spacing="2"
-                           RadioButtonGroup.GroupName="theme"
-                           RadioButtonGroup.SelectedValue="{Binding Theme}">
-        <VerticalStackLayout.Resources>
-          <!-- The default RadioButton renders an opaque row fill that reads as a dark band
-               on the light canvas. Make the row transparent and theme the label so it sits
-               on the page background in both modes. -->
-          <Style TargetType="RadioButton">
-            <Setter Property="BackgroundColor" Value="Transparent" />
-            <Setter Property="TextColor"
-                    Value="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
-          </Style>
-        </VerticalStackLayout.Resources>
-        <RadioButton Content="Light" Value="{x:Static vm:ThemeChoice.Light}"
-                     SemanticProperties.Description="Light theme" />
-        <RadioButton Content="Dark" Value="{x:Static vm:ThemeChoice.Dark}"
-                     SemanticProperties.Description="Dark theme" />
-        <RadioButton Content="System default" Value="{x:Static vm:ThemeChoice.System}"
-                     SemanticProperties.Description="Follow the device theme" />
-      </VerticalStackLayout>
-      <Label Style="{StaticResource FieldCaption}"
-             Text="dark is the studio default; system follows your device." />
+      <CollectionView ItemsSource="{Binding Themes}"
+                      SelectionMode="Single"
+                      SelectedItem="{Binding SelectedThemeObject, Mode=TwoWay}">
+        <CollectionView.ItemsLayout>
+          <GridItemsLayout Orientation="Vertical"
+                           Span="{OnPlatform Android=2, Default=3}"
+                           HorizontalItemSpacing="10"
+                           VerticalItemSpacing="10" />
+        </CollectionView.ItemsLayout>
+        <CollectionView.ItemTemplate>
+          <DataTemplate x:DataType="theming:Theme">
+            <Border Stroke="Transparent" StrokeThickness="0" Padding="0" HeightRequest="118">
+              <Border.StrokeShape>
+                <RoundRectangle CornerRadius="10" />
+              </Border.StrokeShape>
+              <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup x:Name="CommonStates">
+                  <VisualState x:Name="Normal" />
+                  <VisualState x:Name="Selected">
+                    <VisualState.Setters>
+                      <Setter Property="Stroke" Value="{StaticResource PhoenixBlue}" />
+                      <Setter Property="StrokeThickness" Value="3" />
+                    </VisualState.Setters>
+                  </VisualState>
+                </VisualStateGroup>
+              </VisualStateManager.VisualStateGroups>
+              <Grid RowDefinitions="*,Auto" Padding="10" RowSpacing="6"
+                    BackgroundColor="{Binding Background, Converter={StaticResource StringToColor}}">
+                <VerticalStackLayout Grid.Row="0" Spacing="6">
+                  <BoxView HeightRequest="6" CornerRadius="3" WidthRequest="64" HorizontalOptions="Start"
+                           Color="{Binding PrimaryText, Converter={StaticResource StringToColor}}" />
+                  <Border StrokeThickness="0" Padding="0" WidthRequest="30" HeightRequest="12" HorizontalOptions="Start"
+                          BackgroundColor="{Binding PrimaryButton, Converter={StaticResource StringToColor}}">
+                    <Border.StrokeShape>
+                      <RoundRectangle CornerRadius="6" />
+                    </Border.StrokeShape>
+                  </Border>
+                  <Border StrokeThickness="0" Padding="6,4"
+                          BackgroundColor="{Binding Editor.Canvas, Converter={StaticResource StringToColor}}">
+                    <Border.StrokeShape>
+                      <RoundRectangle CornerRadius="4" />
+                    </Border.StrokeShape>
+                    <HorizontalStackLayout Spacing="5">
+                      <Label Text="def" FontFamily="HackRegular" FontSize="9"
+                             TextColor="{Binding Editor.Keyword, Converter={StaticResource StringToColor}}" />
+                      <Label Text="x" FontFamily="HackRegular" FontSize="9"
+                             TextColor="{Binding Editor.StringLiteral, Converter={StaticResource StringToColor}}" />
+                    </HorizontalStackLayout>
+                  </Border>
+                </VerticalStackLayout>
+                <Label Grid.Row="1" Text="{Binding Name}" FontFamily="HackRegular" FontSize="11"
+                       TextColor="{Binding PrimaryText, Converter={StaticResource StringToColor}}" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </CollectionView.ItemTemplate>
+      </CollectionView>
+
+      <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+        <Label Grid.Column="0" Style="{StaticResource FieldCaption}" VerticalOptions="Center"
+               Text="Sync with the device light/dark setting" />
+        <Switch Grid.Column="1" IsToggled="{Binding SyncWithOs}"
+                SemanticProperties.Description="Sync theme with the device light and dark setting" />
+      </Grid>
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="8" IsVisible="{Binding SyncWithOs}">
+        <Picker Grid.Column="0" Title="Light theme"
+                ItemsSource="{Binding LightThemes}"
+                ItemDisplayBinding="{Binding Name}"
+                SelectedItem="{Binding SelectedLightTheme, Mode=TwoWay}" />
+        <Picker Grid.Column="1" Title="Dark theme"
+                ItemsSource="{Binding DarkThemes}"
+                ItemDisplayBinding="{Binding Name}"
+                SelectedItem="{Binding SelectedDarkTheme, Mode=TwoWay}" />
+      </Grid>
 
       <BoxView Style="{StaticResource Hairline}" />
 
@@ -81,7 +135,7 @@
                  SemanticProperties.Description="GitHub repository owner" />
           <Label Grid.Column="1" Text="/" VerticalOptions="Center"
                  FontFamily="HackRegular"
-                 TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
+                 TextColor="{DynamicResource KickerAccent}" />
           <Entry Grid.Column="2" Placeholder="repo" Text="{Binding Repo}"
                  SemanticProperties.Description="GitHub repository name" />
         </Grid>
@@ -147,12 +201,12 @@
             <shapes:Path Aspect="Uniform" HeightRequest="22" WidthRequest="22"
                          VerticalOptions="Center" HorizontalOptions="Center"
                          IsVisible="{Binding MaskToken}"
-                         Fill="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
+                         Fill="{DynamicResource OnSurface}"
                          Data="M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
             <shapes:Path Aspect="Uniform" HeightRequest="22" WidthRequest="22"
                          VerticalOptions="Center" HorizontalOptions="Center"
                          IsVisible="{Binding ShowToken}"
-                         Fill="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
+                         Fill="{DynamicResource OnSurface}"
                          Data="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z" />
           </Grid>
         </Grid>

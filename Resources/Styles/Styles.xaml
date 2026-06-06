@@ -2,11 +2,11 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-  <!-- Primary action button: phoenix-blue background, paper-100 label,
+  <!-- Primary action button: themed primary background, on-primary label,
        11pt Hack caps-mono at 0.14em tracking, 4px corner, 44px height. -->
   <Style x:Key="ButtonPrimary" TargetType="Button">
-    <Setter Property="BackgroundColor" Value="{StaticResource PhoenixBlue}" />
-    <Setter Property="TextColor" Value="{StaticResource Paper100}" />
+    <Setter Property="BackgroundColor" Value="{DynamicResource Primary}" />
+    <Setter Property="TextColor" Value="{DynamicResource OnPrimary}" />
     <Setter Property="FontFamily" Value="HackBold" />
     <Setter Property="FontSize" Value="11" />
     <Setter Property="CharacterSpacing" Value="2" />
@@ -21,23 +21,23 @@
           <VisualState x:Name="Normal" />
           <VisualState x:Name="PointerOver">
             <VisualState.Setters>
-              <Setter Property="BackgroundColor" Value="{StaticResource PhoenixBlueHover}" />
+              <Setter Property="BackgroundColor" Value="{DynamicResource PrimaryHover}" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="Focused">
             <VisualState.Setters>
-              <Setter Property="BackgroundColor" Value="{StaticResource PhoenixBlueHover}" />
+              <Setter Property="BackgroundColor" Value="{DynamicResource PrimaryHover}" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="Pressed">
             <VisualState.Setters>
-              <Setter Property="BackgroundColor" Value="{StaticResource PhoenixBlueDeep}" />
+              <Setter Property="BackgroundColor" Value="{DynamicResource PrimaryPressed}" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="Disabled">
             <VisualState.Setters>
-              <Setter Property="BackgroundColor" Value="{StaticResource Ink700}" />
-              <Setter Property="TextColor" Value="{StaticResource Paper500}" />
+              <Setter Property="BackgroundColor" Value="{DynamicResource DisabledSurface}" />
+              <Setter Property="TextColor" Value="{DynamicResource OnSurfaceFaint}" />
             </VisualState.Setters>
           </VisualState>
         </VisualStateGroup>
@@ -45,13 +45,11 @@
     </Setter>
   </Style>
 
-  <!-- Ghost button: transparent background, paper-300/ink-950 label, 1px border. -->
+  <!-- Ghost button: transparent background, on-surface label, 1px outline. -->
   <Style x:Key="ButtonGhost" TargetType="Button">
     <Setter Property="BackgroundColor" Value="Transparent" />
-    <Setter Property="TextColor"
-            Value="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
-    <Setter Property="BorderColor"
-            Value="{AppThemeBinding Light={StaticResource Paper500}, Dark={StaticResource Ink700}}" />
+    <Setter Property="TextColor" Value="{DynamicResource OnSurface}" />
+    <Setter Property="BorderColor" Value="{DynamicResource Outline}" />
     <Setter Property="BorderWidth" Value="1" />
     <Setter Property="FontFamily" Value="HackRegular" />
     <Setter Property="FontSize" Value="11" />
@@ -66,21 +64,19 @@
           <VisualState x:Name="Normal" />
           <VisualState x:Name="PointerOver">
             <VisualState.Setters>
-              <Setter Property="BorderColor"
-                      Value="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
-              <Setter Property="BackgroundColor"
-                      Value="{AppThemeBinding Light={StaticResource Paper300}, Dark={StaticResource Ink850}}" />
+              <Setter Property="BorderColor" Value="{DynamicResource OnSurface}" />
+              <Setter Property="BackgroundColor" Value="{DynamicResource GhostHoverSurface}" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="Focused">
             <VisualState.Setters>
-              <Setter Property="BorderColor" Value="{StaticResource SignalCyan}" />
+              <Setter Property="BorderColor" Value="{DynamicResource FocusRing}" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="Disabled">
             <VisualState.Setters>
-              <Setter Property="TextColor" Value="{StaticResource Paper500}" />
-              <Setter Property="BorderColor" Value="{StaticResource Ink700}" />
+              <Setter Property="TextColor" Value="{DynamicResource OnSurfaceFaint}" />
+              <Setter Property="BorderColor" Value="{DynamicResource Outline}" />
             </VisualState.Setters>
           </VisualState>
         </VisualStateGroup>
@@ -88,10 +84,10 @@
     </Setter>
   </Style>
 
-  <!-- Status-bar tap button: borderless 11pt Hack caps-mono, 44px target, focus-visible cyan ring. -->
+  <!-- Status-bar tap button: borderless 11pt Hack caps-mono, 44px target, focus-visible ring. -->
   <Style x:Key="StatusBarButton" TargetType="Button">
     <Setter Property="BackgroundColor" Value="Transparent" />
-    <Setter Property="TextColor" Value="{StaticResource Paper500}" />
+    <Setter Property="TextColor" Value="{DynamicResource OnSurfaceVariant}" />
     <Setter Property="BorderWidth" Value="0" />
     <Setter Property="BorderColor" Value="Transparent" />
     <Setter Property="FontFamily" Value="HackRegular" />
@@ -107,21 +103,19 @@
           <VisualState x:Name="Normal" />
           <VisualState x:Name="PointerOver">
             <VisualState.Setters>
-              <Setter Property="TextColor"
-                      Value="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper100}}" />
+              <Setter Property="TextColor" Value="{DynamicResource OnSurfaceStrong}" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="Focused">
             <VisualState.Setters>
               <Setter Property="BorderWidth" Value="1" />
-              <Setter Property="BorderColor" Value="{StaticResource SignalCyan}" />
-              <Setter Property="TextColor"
-                      Value="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper100}}" />
+              <Setter Property="BorderColor" Value="{DynamicResource FocusRing}" />
+              <Setter Property="TextColor" Value="{DynamicResource OnSurfaceStrong}" />
             </VisualState.Setters>
           </VisualState>
           <VisualState x:Name="Disabled">
             <VisualState.Setters>
-              <Setter Property="TextColor" Value="{StaticResource Ink700}" />
+              <Setter Property="TextColor" Value="{DynamicResource OnSurfaceFaint}" />
             </VisualState.Setters>
           </VisualState>
         </VisualStateGroup>
@@ -130,49 +124,42 @@
   </Style>
 
   <!-- Status-bar read label (right cluster: SaveStatus, CurrentPath, WordCount, etc.)
-       Theme-aware to maintain AA contrast on Paper100 in light mode. -->
+       Themed muted role to keep AA contrast on the surface in every theme. -->
   <Style x:Key="StatusBarRead" TargetType="Label">
     <Setter Property="FontFamily" Value="HackRegular" />
     <Setter Property="FontSize" Value="11" />
-    <Setter Property="TextColor"
-            Value="{AppThemeBinding Light={StaticResource Paper600}, Dark={StaticResource Paper500}}" />
+    <Setter Property="TextColor" Value="{DynamicResource OnSurfaceVariant}" />
     <Setter Property="VerticalOptions" Value="Center" />
   </Style>
 
-  <!-- Bracketed kicker: section labels in cyan caps-mono. Bind Text="[ section name ]"
-       Light mode uses the deeper cyan for AA contrast. -->
+  <!-- Bracketed kicker: section labels in the theme accent caps-mono. Bind Text="[ section name ]". -->
   <Style x:Key="Kicker" TargetType="Label">
     <Setter Property="FontFamily" Value="HackBold" />
     <Setter Property="FontSize" Value="12" />
     <Setter Property="CharacterSpacing" Value="2" />
-    <Setter Property="TextColor"
-            Value="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
+    <Setter Property="TextColor" Value="{DynamicResource KickerAccent}" />
     <Setter Property="VerticalOptions" Value="Center" />
   </Style>
 
-  <!-- Field caption beneath a form field (Settings page). 11pt mono, theme-aware muted. -->
+  <!-- Field caption beneath a form field (Settings page). 11pt mono, themed muted. -->
   <Style x:Key="FieldCaption" TargetType="Label">
     <Setter Property="FontFamily" Value="HackRegular" />
     <Setter Property="FontSize" Value="11" />
-    <Setter Property="TextColor"
-            Value="{AppThemeBinding Light={StaticResource Paper600}, Dark={StaticResource Paper500}}" />
+    <Setter Property="TextColor" Value="{DynamicResource OnSurfaceVariant}" />
   </Style>
 
-  <!-- Hairline divider, theme-aware. -->
+  <!-- Hairline divider, themed. -->
   <Style x:Key="Hairline" TargetType="BoxView">
     <Setter Property="HeightRequest" Value="1" />
-    <Setter Property="Color"
-            Value="{AppThemeBinding Light={StaticResource DividerLight}, Dark={StaticResource DividerDark}}" />
+    <Setter Property="Color" Value="{DynamicResource OutlineVariant}" />
     <Setter Property="Margin" Value="0,16" />
   </Style>
 
   <!-- Implicit Entry style: brand-aligned text field. -->
   <Style TargetType="Entry">
-    <Setter Property="BackgroundColor"
-            Value="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink850}}" />
-    <Setter Property="TextColor"
-            Value="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
-    <Setter Property="PlaceholderColor" Value="{StaticResource Paper500}" />
+    <Setter Property="BackgroundColor" Value="{DynamicResource SurfaceVariant}" />
+    <Setter Property="TextColor" Value="{DynamicResource OnSurface}" />
+    <Setter Property="PlaceholderColor" Value="{DynamicResource OnSurfaceFaint}" />
     <Setter Property="FontFamily" Value="HackRegular" />
     <Setter Property="FontSize" Value="14" />
     <Setter Property="MinimumHeightRequest" Value="44" />

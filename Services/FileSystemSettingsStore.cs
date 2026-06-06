@@ -46,7 +46,9 @@ public sealed class FileSystemSettingsStore : ISettingsStore
             // No settings yet (fresh install / post-wipe): seed from the embedded per-developer
             // defaults if one was baked in, else stay on AppSettings.Default. Nothing is written to
             // disk here - the seeded values become Current and persist on the first Save.
-            _current = SettingsSeed.ParseOrDefault(ReadEmbeddedSeed());
+            // Migrate the seed/default too, so a legacy-shaped developer seed maps its Theme
+            // preference onto the gallery fields (ThemeId/sync) on a fresh install.
+            _current = SettingsSeed.ParseOrDefault(ReadEmbeddedSeed()).Migrate();
             return Task.CompletedTask;
         }
         try
@@ -55,7 +57,9 @@ public sealed class FileSystemSettingsStore : ISettingsStore
             var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
             if (loaded is not null)
             {
-                _current = loaded;
+                // Migrate() is pure + synchronous (deadlock-safe per LoadAsync's contract); it
+                // upgrades a pre-gallery settings.json from the legacy Theme enum to ThemeId/sync.
+                _current = loaded.Migrate();
                 Changed?.Invoke(this, EventArgs.Empty);
             }
         }
