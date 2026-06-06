@@ -177,9 +177,26 @@ public sealed partial class EditorViewModel : ObservableObject
     partial void OnRawMarkdownChanged(string value)
     {
         if (!_seeding) IsDirty = true;
-        var parsed = _parser.Parse(value);
-        FrontMatter = parsed.FrontMatter;
-        var words = parsed.Body.Split([' ', '\t', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries).Length;
+
+        // This runs on every keystroke, and while the user is mid-edit the YAML front matter is
+        // routinely, transiently invalid (an unterminated quote, a half-typed list) -- the parser
+        // throws out of Parse. Never let that escape the setter: on desktop it would crash the
+        // async-void WebView "change" handler; on Android it re-threw out of the ~750ms dirty-poll
+        // every tick. Keep the last-good FrontMatter and still refresh the word count off the raw
+        // buffer so metadata stays live until the YAML parses again.
+        string body;
+        try
+        {
+            var parsed = _parser.Parse(value);
+            FrontMatter = parsed.FrontMatter;
+            body = parsed.Body;
+        }
+        catch
+        {
+            body = value;
+        }
+
+        var words = body.Split([' ', '\t', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries).Length;
         WordCount = words;
         ReadingTimeMinutes = Math.Max(1, (int)Math.Ceiling(words / 200.0));
     }
