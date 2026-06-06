@@ -13,6 +13,13 @@ public interface IThemeApplicator
     /// <summary>Resolve the active theme from the current settings + OS brightness and apply it.</summary>
     void ApplyCurrent();
 
+    /// <summary>The currently-applied theme, so pages constructed after startup (editor, preview) can
+    /// pull the active theme when they appear (they missed the startup <see cref="EditorPaletteChanged"/>).</summary>
+    Theme CurrentTheme { get; }
+
+    /// <summary>The active theme's editor CSS-var palette (shorthand for <c>CurrentTheme.Editor</c>).</summary>
+    EditorPalette CurrentEditorPalette { get; }
+
     /// <summary>Raised with the active theme's editor palette whenever a theme is applied.</summary>
     event EventHandler<EditorPalette>? EditorPaletteChanged;
 }
@@ -25,6 +32,9 @@ public sealed class ThemeApplicator : IThemeApplicator
     public ThemeApplicator(ISettingsStore store) => _store = store;
 
     public event EventHandler<EditorPalette>? EditorPaletteChanged;
+
+    public Theme CurrentTheme { get; private set; } = ThemeCatalog.Default;
+    public EditorPalette CurrentEditorPalette => CurrentTheme.Editor;
 
     public void ApplyCurrent()
     {
@@ -49,6 +59,7 @@ public sealed class ThemeApplicator : IThemeApplicator
                 ? AppTheme.Unspecified
                 : (theme.Brightness == Brightness.Dark ? AppTheme.Dark : AppTheme.Light);
 
+            CurrentTheme = theme;
             EditorPaletteChanged?.Invoke(this, theme.Editor);
         }
         finally { _applying = false; }

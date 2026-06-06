@@ -25,27 +25,45 @@ public sealed class PreviewRenderer
         .UseGenericAttributes()
         .Build();
 
-    /// <param name="githubCss">The bundled github-markdown stylesheet text for the active theme.</param>
-    /// <param name="dark">True for the dark canvas (the github CSS itself carries the theme colors).</param>
-    public string Build(string markdown, string githubCss, bool dark = false)
+    /// <summary>Back-compat brightness overload (GitHub light/dark canvas). Delegates to the
+    /// palette overload with the GitHub colorblind canvas/fg/accent/border for that brightness.</summary>
+    public string Build(string markdown, string githubCss, bool dark = false) =>
+        Build(markdown, githubCss,
+            canvas: dark ? "#0d1117" : "#ffffff",
+            fg: dark ? "#f0f6fc" : "#1f2328",
+            accent: dark ? "#1f6feb" : "#0969da",
+            link: dark ? "#1f6feb" : "#0969da",
+            codeBg: dark ? "#161b22" : "#f6f8fa",
+            border: dark ? "#30363d" : "#d0d7de");
+
+    /// <summary>Render the preview with an explicit theme palette layered over the bundled github CSS,
+    /// so any of the gallery themes color the canvas, text, links, code blocks, and borders. Markdown
+    /// can't reference the ViewModels' PreviewPalette type, so the caller unpacks it into plain strings.</summary>
+    public string Build(string markdown, string githubCss,
+        string canvas, string fg, string accent, string link, string codeBg, string border)
     {
         var (frontmatter, body) = Split(markdown ?? string.Empty);
         var bodyHtml = Markdig.Markdown.ToHtml(body, _pipeline);
         var fmTable = BuildFrontmatterTable(frontmatter);
-        var canvas = dark ? "#0d1117" : "#ffffff";
-        var fg = dark ? "#f0f6fc" : "#1f2328";
 
         var sb = new StringBuilder(bodyHtml.Length + (githubCss?.Length ?? 0) + 1024);
         sb.Append("<!DOCTYPE html><html><head><meta charset=\"utf-8\">");
         sb.Append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
         sb.Append("<style>").Append(githubCss ?? string.Empty).Append("</style>");
-        // Page chrome around the github-markdown content (the CSS styles .markdown-body itself).
-        // The explicit table-cell color (the github theme's own fg) guards readability: in the WebView
-        // the frontmatter table cells weren't inheriting the .markdown-body fg, rendering dark-on-dark.
+        // Theme overrides layered on top of the bundled github CSS so any palette renders. The
+        // explicit .markdown-body + table-cell colors guard readability: in the WebView those cells
+        // weren't inheriting the body fg, rendering dark-on-dark.
         sb.Append("<style>body{margin:0;background:").Append(canvas)
-          .Append(";}.markdown-body{box-sizing:border-box;max-width:980px;margin:0 auto;padding:32px 40px;}")
+          .Append(";}.markdown-body{box-sizing:border-box;max-width:980px;margin:0 auto;padding:32px 40px;color:")
+          .Append(fg).Append(";}")
           .Append(".markdown-body img{max-width:100%;height:auto;}")
-          .Append(".markdown-body table th,.markdown-body table td{color:").Append(fg).Append(";}</style>");
+          .Append(".markdown-body a{color:").Append(link).Append(";}")
+          .Append(".markdown-body h1,.markdown-body h2{border-bottom-color:").Append(border).Append(";}")
+          .Append(".markdown-body hr{background-color:").Append(border).Append(";}")
+          .Append(".markdown-body blockquote{border-left-color:").Append(accent).Append(";}")
+          .Append(".markdown-body code,.markdown-body pre{background-color:").Append(codeBg).Append(";}")
+          .Append(".markdown-body table th,.markdown-body table td{color:").Append(fg)
+          .Append(";border-color:").Append(border).Append(";}</style>");
         sb.Append("</head><body><article class=\"markdown-body\">");
         sb.Append(fmTable);
         sb.Append(bodyHtml);

@@ -906,6 +906,30 @@ html, body {
       diag('setTheme ' + theme);
       document.body.classList.toggle('light', theme === 'light');
     },
+    setPalette(palette) {
+      try {
+        if (!palette || typeof palette !== 'object') return;
+        const root = document.documentElement;
+        for (const k in palette) {
+          if (Object.prototype.hasOwnProperty.call(palette, k) && k.charAt(0) === '-') {
+            root.style.setProperty(k, String(palette[k]));
+          }
+        }
+        // A full palette carries its own canvas/text, so drop the body.light brightness override
+        // to stop the :root-default vs body.light cascade from fighting the inline custom props.
+        document.body.classList.remove('light');
+        diag('setPalette applied ' + Object.keys(palette).length + ' vars');
+      } catch (err) {
+        diag('setPalette error: ' + err.message);
+      }
+    },
+    setPaletteB64(b64) {
+      try {
+        window.PostXING.setPalette(JSON.parse(decodeBase64Utf8(b64 || '{}')));
+      } catch (err) {
+        diag('setPaletteB64 error: ' + err.message);
+      }
+    },
     focus() {
       editor.focus();
     },
@@ -926,6 +950,7 @@ html, body {
       if (!msg || !msg.type) return;
       if (msg.type === 'setText') window.PostXING.setText(msg.text || '');
       else if (msg.type === 'setTheme') window.PostXING.setTheme(msg.theme || 'dark');
+      else if (msg.type === 'setPalette') window.PostXING.setPalette(msg.palette || {});
       else diag('unknown host msg type: ' + msg.type);
     } catch (err) {
       diag('bad host message: ' + err.message);
