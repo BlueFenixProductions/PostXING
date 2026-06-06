@@ -288,6 +288,10 @@ public sealed class GhCliGitHubGateway(ILogger<GhCliGitHubGateway> log, string g
             RedirectStandardInput = stdin is not null,
             UseShellExecute = false,
             CreateNoWindow = true,
+            // gh emits UTF-8 (checkmarks, em-dashes in `auth status`); without this the
+            // console code page decodes it as mojibake (e.g. "â€"" for the status line).
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
         };
         foreach (var a in args) psi.ArgumentList.Add(a);
 

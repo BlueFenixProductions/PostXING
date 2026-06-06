@@ -44,6 +44,21 @@ public sealed class PreviewViewModelTests
     }
 
     [Fact]
+    public async Task Themed_render_uses_the_theme_preview_palette()
+    {
+        var vm = Create();
+        vm.SetMarkdown("# Hi");
+        vm.Theme = PostXING.ViewModels.Theming.ThemeCatalog.Get("tokyo-night");
+
+        await vm.RefreshAsync();
+
+        var p = vm.Theme.Preview;
+        vm.Html.ShouldContain(p.Canvas);
+        vm.Html.ShouldContain(p.Fg);
+        vm.Html.ShouldContain(p.Link);
+    }
+
+    [Fact]
     public async Task Renders_frontmatter_as_a_table()
     {
         var vm = Create();
