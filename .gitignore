@@ -8,7 +8,11 @@
 **/BundleArtifacts/
 **/GeneratedArtifacts/
 **/.vs/
-**/.vscode/
+# Ignore editor-local VSCode/VSCodium files, but commit the shared workspace
+# config (issue #22: 2-space XAML for VSCodium).
+**/.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 *.user
 *.suo
 *.userosscache

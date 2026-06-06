@@ -1,0 +1,13 @@
+{
+  // XAML is treated as XML by VSCodium. Force 2-space indentation and stop the
+  // editor from guessing indent width from file contents (issue #22).
+  "editor.detectIndentation": false,
+  "[xml]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
+  "[xaml]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  }
+}

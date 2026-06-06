@@ -1,0 +1,7 @@
+{
+  // EditorConfig makes VSCodium honor .editorconfig (including 2-space XAML) for
+  // every file type, not just the [xml]/[xaml] overrides in settings.json.
+  "recommendations": [
+    "editorconfig.editorconfig"
+  ]
+}
