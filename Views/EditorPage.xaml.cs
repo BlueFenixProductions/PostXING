@@ -4,10 +4,6 @@ using System.Text.Json;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Storage;
 using PostXING.ViewModels;
-#if ANDROID
-using AndroidX.Core.View;
-using AView = Android.Views.View;
-#endif
 
 namespace PostXING.App.Views;
 
@@ -83,10 +79,6 @@ public partial class EditorPage : ContentPage
 #if ANDROID
         // Android's JS->host bridge can't live-sync edits, so pull the editor text on save.
         vm.SyncBeforeSaveAsync = () => SyncEditorTextBeforeSaveAsync();
-
-        // Edge-to-edge (target SDK 36) defeats AdjustResize, so the soft keyboard hides the lower
-        // editor (GH #39). Hook the IME-inset -> editor-JS bridge once the WebView's handler exists.
-        EditorWebView.HandlerChanged += (_, _) => HookAndroidImeInsets();
 #endif
 
         // HybridWebView serves Resources/Raw/editor (HybridRoot) and exposes a raw
@@ -107,7 +99,6 @@ public partial class EditorPage : ContentPage
         _ = SeedEditorAsync();
 #if ANDROID
         StartDirtyPoll();
-        HookAndroidImeInsets();   // backstop: the handler may already exist before HandlerChanged fired
 #endif
     }
 
@@ -328,60 +319,6 @@ public partial class EditorPage : ContentPage
         var json = raw.Length >= 2 && raw[0] == '"' && raw[^1] == '"' ? raw : "\"" + raw + "\"";
         try { return JsonSerializer.Deserialize<string>(json) ?? raw; }
         catch { return raw; }
-    }
-
-    // Edge-to-edge enforcement (target SDK 35+) means WindowSoftInputMode=AdjustResize no longer
-    // shrinks the window for the soft keyboard, so the lower editor lines hide behind the IME (GH
-    // #39). The JS can't detect the keyboard either: on this Android WebView window.innerHeight and
-    // visualViewport.height stay full-height whether the keyboard is up or down (measured via remote
-    // debugging). So we read the IME inset natively here and push it (device px) into the editor JS,
-    // which sizes the editor to the real visible area above the keyboard and keeps the caret in view.
-    // Scoped to the WebView so MAUI's own system-bar inset handling elsewhere is left alone.
-    private bool _imeInsetsHooked;
-
-    private void HookAndroidImeInsets()
-    {
-        if (_imeInsetsHooked) return;
-        if (EditorWebView.Handler?.PlatformView is not AView platformView) return;
-        _imeInsetsHooked = true;
-        ViewCompat.SetOnApplyWindowInsetsListener(platformView, new ImeInsetListener(PushKeyboardInsetToJs));
-        ViewCompat.RequestApplyInsets(platformView);
-        BridgeLog.Write("ime inset listener attached to WebView");
-    }
-
-    private void PushKeyboardInsetToJs(int imeBottomPx)
-    {
-        BridgeLog.Write($"ime inset bottom={imeBottomPx}");
-        // Fire-and-forget like the other host->JS pushes: the awaited Task never completes on this
-        // Android HybridWebView but the JS still runs. The if-guard makes a pre-load push harmless.
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            try { _ = EditorWebView.EvaluateJavaScriptAsync($"if(window.PostXING&&window.PostXING.setKeyboardInsetPx){{window.PostXING.setKeyboardInsetPx({imeBottomPx})}}"); }
-            catch (Exception ex) { BridgeLog.Write($"PushKeyboardInset threw {ex.GetType().Name}: {ex.Message}"); }
-        });
-    }
-
-    // Reads the IME (soft keyboard) inset on each window-insets pass and forwards its height in
-    // device px when it changes. Returns the insets unconsumed — the WebView is a leaf, nothing
-    // downstream depends on them; the diff-guard avoids redundant pushes on unrelated passes.
-    private sealed class ImeInsetListener : Java.Lang.Object, IOnApplyWindowInsetsListener
-    {
-        private readonly Action<int> _onInsetChanged;
-        private int _lastBottom = -1;
-
-        public ImeInsetListener(Action<int> onInsetChanged) => _onInsetChanged = onInsetChanged;
-
-        public WindowInsetsCompat? OnApplyWindowInsets(AView? v, WindowInsetsCompat? insets)
-        {
-            if (insets is null) return insets;
-            var imeBottom = insets.GetInsets(WindowInsetsCompat.Type.Ime())?.Bottom ?? 0;
-            if (imeBottom != _lastBottom)
-            {
-                _lastBottom = imeBottom;
-                _onInsetChanged(imeBottom);
-            }
-            return insets;
-        }
     }
 #endif
 }

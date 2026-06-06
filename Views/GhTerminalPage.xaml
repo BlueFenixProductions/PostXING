@@ -7,59 +7,59 @@
              BackgroundColor="{StaticResource Ink950}"
              Shell.NavBarIsVisible="False"
              Title="gh">
-    <Grid RowDefinitions="Auto,*,Auto,Auto,Auto" Padding="12" RowSpacing="8">
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-            <Label Grid.Column="0" Style="{StaticResource Kicker}" Text="[ gh terminal ]"
-                   SemanticProperties.HeadingLevel="Level1" />
-            <Button Grid.Column="1" Text="clear" Command="{Binding ClearCommand}"
-                    Style="{StaticResource ButtonGhost}"
-                    SemanticProperties.Description="Clear terminal output" />
-            <Button Grid.Column="2" Text="close" Command="{Binding CloseCommand}"
-                    Style="{StaticResource ButtonGhost}"
-                    SemanticProperties.Description="Close gh terminal" />
-        </Grid>
-
-        <Border Grid.Row="1" StrokeThickness="0"
-                BackgroundColor="{StaticResource Ink1000}"
-                StrokeShape="RoundRectangle 12,12,12,12">
-            <ScrollView>
-                <Label Text="{Binding OutputText}" FontFamily="HackRegular" FontSize="13"
-                       LineHeight="1.6"
-                       TextColor="{StaticResource Paper300}" Padding="20,16"
-                       SemanticProperties.Description="Terminal output" />
-            </ScrollView>
-        </Border>
-
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
-            <Label Grid.Column="0" Text="~/blue-fenix $ gh"
-                   FontFamily="HackBold" FontSize="13"
-                   TextColor="{StaticResource SignalCyan}" VerticalOptions="Center" />
-            <Entry Grid.Column="1" Text="{Binding Command}"
-                   FontFamily="HackRegular" FontSize="13"
-                   BackgroundColor="{StaticResource Ink1000}" TextColor="{StaticResource Paper300}"
-                   Placeholder="auth status" PlaceholderColor="{StaticResource Paper500}"
-                   SemanticProperties.Description="gh subcommand"
-                   SemanticProperties.Hint="Type a gh subcommand and press Run."
-                   ReturnType="Send" ReturnCommand="{Binding RunCommand}" />
-            <Button Grid.Column="2" Text="run" Command="{Binding RunCommand}"
-                    Style="{StaticResource ButtonPrimary}"
-                    SemanticProperties.Description="Run gh command" />
-        </Grid>
-
-        <Editor Grid.Row="3" Text="{Binding Stdin}" AutoSize="TextChanges"
-                FontFamily="HackRegular" FontSize="12"
-                BackgroundColor="{StaticResource Ink1000}" TextColor="{StaticResource Paper300}"
-                Placeholder="optional stdin (paste a PAT here before running &quot;auth login --with-token&quot;)"
-                PlaceholderColor="{StaticResource Paper500}"
-                HeightRequest="60"
-                SemanticProperties.Description="Optional stdin"
-                SemanticProperties.Hint="Optional standard input for the gh command. Used for auth login --with-token." />
-
-        <HorizontalStackLayout Grid.Row="4" Spacing="12">
-            <Label Text="[ docs ]" Style="{StaticResource Kicker}" />
-            <Label Text="https://cli.github.com/manual/" FontFamily="HackRegular" FontSize="11"
-                   TextColor="{StaticResource ForgeAmber}" TextDecorations="Underline"
-                   VerticalOptions="Center" />
-        </HorizontalStackLayout>
+  <Grid RowDefinitions="Auto,*,Auto,Auto,Auto" Padding="12" RowSpacing="8">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+      <Label Grid.Column="0" Style="{StaticResource Kicker}" Text="[ gh terminal ]"
+             SemanticProperties.HeadingLevel="Level1" />
+      <Button Grid.Column="1" Text="clear" Command="{Binding ClearCommand}"
+              Style="{StaticResource ButtonGhost}"
+              SemanticProperties.Description="Clear terminal output" />
+      <Button Grid.Column="2" Text="close" Command="{Binding CloseCommand}"
+              Style="{StaticResource ButtonGhost}"
+              SemanticProperties.Description="Close gh terminal" />
     </Grid>
+
+    <Border Grid.Row="1" StrokeThickness="0"
+            BackgroundColor="{StaticResource Ink1000}"
+            StrokeShape="RoundRectangle 12,12,12,12">
+      <ScrollView>
+        <Label Text="{Binding OutputText}" FontFamily="HackRegular" FontSize="13"
+               LineHeight="1.6"
+               TextColor="{StaticResource Paper300}" Padding="20,16"
+               SemanticProperties.Description="Terminal output" />
+      </ScrollView>
+    </Border>
+
+    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+      <Label Grid.Column="0" Text="~/blue-fenix $ gh"
+             FontFamily="HackBold" FontSize="13"
+             TextColor="{StaticResource SignalCyan}" VerticalOptions="Center" />
+      <Entry Grid.Column="1" Text="{Binding Command}"
+             FontFamily="HackRegular" FontSize="13"
+             BackgroundColor="{StaticResource Ink1000}" TextColor="{StaticResource Paper300}"
+             Placeholder="auth status" PlaceholderColor="{StaticResource Paper500}"
+             SemanticProperties.Description="gh subcommand"
+             SemanticProperties.Hint="Type a gh subcommand and press Run."
+             ReturnType="Send" ReturnCommand="{Binding RunCommand}" />
+      <Button Grid.Column="2" Text="run" Command="{Binding RunCommand}"
+              Style="{StaticResource ButtonPrimary}"
+              SemanticProperties.Description="Run gh command" />
+    </Grid>
+
+    <Editor Grid.Row="3" Text="{Binding Stdin}" AutoSize="TextChanges"
+            FontFamily="HackRegular" FontSize="12"
+            BackgroundColor="{StaticResource Ink1000}" TextColor="{StaticResource Paper300}"
+            Placeholder="optional stdin (paste a PAT here before running &quot;auth login --with-token&quot;)"
+            PlaceholderColor="{StaticResource Paper500}"
+            HeightRequest="60"
+            SemanticProperties.Description="Optional stdin"
+            SemanticProperties.Hint="Optional standard input for the gh command. Used for auth login --with-token." />
+
+    <HorizontalStackLayout Grid.Row="4" Spacing="12">
+      <Label Text="[ docs ]" Style="{StaticResource Kicker}" />
+      <Label Text="https://cli.github.com/manual/" FontFamily="HackRegular" FontSize="11"
+             TextColor="{StaticResource ForgeAmber}" TextDecorations="Underline"
+             VerticalOptions="Center" />
+    </HorizontalStackLayout>
+  </Grid>
 </ContentPage>
