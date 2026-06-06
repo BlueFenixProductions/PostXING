@@ -7,7 +7,7 @@
              x:Class="PostXING.App.Views.EditorPage"
              x:DataType="vm:EditorViewModel"
              Title="PostXING"
-             BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
+             BackgroundColor="{DynamicResource Surface}"
              Shell.NavBarIsVisible="{OnPlatform Default=False, Android=True}">
   <!-- Minimum-chrome MenuBar: only canonical Windows keyboard accelerators live here.
        All visible affordances stay in the status bar at the bottom of the editor (Windows). -->
@@ -104,10 +104,10 @@
               <TapGestureRecognizer Command="{Binding PreviewCommand}" />
             </HorizontalStackLayout.GestureRecognizers>
             <shapes:Path Aspect="Uniform" HeightRequest="16" WidthRequest="16" VerticalOptions="Center"
-                         Fill="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
+                         Fill="{DynamicResource OnSurface}"
                          Data="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm0-2h14V7H5zm3.338-3.113Q6.725 14.776 6 13q.725-1.775 2.338-2.887T12 9t3.663 1.113T18 13q-.725 1.775-2.337 2.888T12 17t-3.662-1.112m2.6-1.826Q10.5 13.626 10.5 13t.438-1.062T12 11.5t1.063.438T13.5 13t-.437 1.063T12 14.5t-1.062-.437m2.837.712Q14.5 14.05 14.5 13t-.725-1.775T12 10.5t-1.775.725T9.5 13t.725 1.775T12 15.5t1.775-.725" />
             <Label Text="preview" VerticalOptions="Center" FontFamily="HackRegular" FontSize="13"
-                   TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
+                   TextColor="{DynamicResource OnSurface}" />
           </HorizontalStackLayout>
           <Button Text="about" Command="{Binding AboutCommand}"
                   Style="{StaticResource StatusBarButton}"
@@ -120,7 +120,7 @@
           <Button Text="publish" Command="{Binding PublishCommand}"
                   IsVisible="{Binding IsDirty}"
                   Style="{StaticResource StatusBarButton}"
-                  TextColor="{AppThemeBinding Light={StaticResource ForgeAmberDeep}, Dark={StaticResource ForgeAmber}}"
+                  TextColor="{DynamicResource PublishAccent}"
                   SemanticProperties.Description="Publish post" />
         </HorizontalStackLayout>
 
@@ -128,11 +128,11 @@
           <Label Style="{StaticResource StatusBarRead}" Text="{Binding SaveStatus}" />
           <Label Style="{StaticResource StatusBarRead}" Text="{Binding CurrentPath}" />
           <Label Style="{StaticResource StatusBarRead}" Text="{Binding WordCount, StringFormat='{0} words'}"
-                 TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
+                 TextColor="{DynamicResource KickerAccent}" />
           <Label Style="{StaticResource StatusBarRead}" Text="{Binding ReadingTimeMinutes, StringFormat='{0} min'}"
-                 TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
+                 TextColor="{DynamicResource KickerAccent}" />
           <Label Style="{StaticResource StatusBarRead}" Text="{Binding GhAuthStatus}"
-                 TextColor="{AppThemeBinding Light={StaticResource ForgeAmberDeep}, Dark={StaticResource ForgeAmber}}" />
+                 TextColor="{DynamicResource PublishAccent}" />
           <HorizontalStackLayout Spacing="4" VerticalOptions="Center"
                                  ToolTipProperties.Text="{Binding SyncDetail}"
                                  SemanticProperties.Description="Git sync status; tap for commit/push/pull">

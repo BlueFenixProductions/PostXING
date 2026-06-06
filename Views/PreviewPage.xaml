@@ -4,7 +4,7 @@
              xmlns:vm="clr-namespace:PostXING.ViewModels;assembly=PostXING.ViewModels"
              x:Class="PostXING.App.Views.PreviewPage"
              x:DataType="vm:PreviewViewModel"
-             BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
+             BackgroundColor="{DynamicResource Surface}"
              Shell.NavBarIsVisible="False"
              Title="Preview">
   <Grid RowDefinitions="*,Auto">

@@ -67,6 +67,7 @@ public static class MauiProgram
             return store;
         });
         builder.Services.AddSingleton<IPendingPostBox, PendingPostBox>();
+        builder.Services.AddSingleton<IThemeApplicator, ThemeApplicator>();
 
         builder.Services.AddTransient<EditorViewModel>();
         builder.Services.AddTransient<SettingsViewModel>();

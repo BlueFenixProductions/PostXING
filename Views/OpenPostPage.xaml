@@ -7,7 +7,7 @@
              x:Class="PostXING.App.Views.OpenPostPage"
              x:DataType="vm:OpenPostViewModel"
              x:Name="ThisPage"
-             BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
+             BackgroundColor="{DynamicResource Surface}"
              Shell.NavBarIsVisible="{OnPlatform Default=False, Android=True}"
              Title="Open post">
   <!-- Minimum-chrome MenuBar mirroring the editor's: only canonical Windows keyboard
@@ -72,12 +72,12 @@
               </SwipeItems>
             </SwipeView.RightItems>
             <Grid Padding="8,4" ColumnDefinitions="*,Auto" ColumnSpacing="12"
-                  BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}">
+                  BackgroundColor="{DynamicResource Surface}">
               <Label Grid.Column="0" Text="{Binding DisplayName}" FontSize="13" FontFamily="HackRegular"
-                     TextColor="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
+                     TextColor="{DynamicResource OnSurface}" />
               <Label Grid.Column="1" Text="{Binding Tag}" FontSize="11" FontFamily="HackRegular"
                      CharacterSpacing="2"
-                     TextColor="{AppThemeBinding Light={StaticResource Paper600}, Dark={StaticResource Paper500}}"
+                     TextColor="{DynamicResource OnSurfaceVariant}"
                      VerticalOptions="Center" />
             </Grid>
           </SwipeView>
