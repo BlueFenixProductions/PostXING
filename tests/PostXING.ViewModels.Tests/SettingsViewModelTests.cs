@@ -90,46 +90,80 @@ public sealed class SettingsViewModelTests
         vm.IsAuthenticated.ShouldBeFalse();
     }
 
-    private static (SettingsViewModel vm, ISettingsStore store) CreateVmWithStore(AppSettings? current = null)
+    private static (SettingsViewModel vm, ISettingsStore store) CreateVmWithStore(
+        AppSettings? current = null, Func<bool>? osIsDark = null)
     {
         var store = Substitute.For<ISettingsStore>();
         store.Current.Returns(current ?? AppSettings.Default);
         var gateway = Substitute.For<IGitHubGateway>();
         gateway.CheckAuthAsync(Arg.Any<CancellationToken>()).Returns(new GhAuthStatus(false, null, "no token"));
-        var vm = new SettingsViewModel(store, gateway, Substitute.For<IFolderPicker>(), new InMemoryGitHubTokenStore());
+        var vm = new SettingsViewModel(store, gateway, Substitute.For<IFolderPicker>(), new InMemoryGitHubTokenStore(), osIsDark);
         return (vm, store);
     }
 
     [Fact]
-    public void Theme_loads_from_the_store()
+    public void Theme_id_loads_from_the_store()
     {
-        var (vm, _) = CreateVmWithStore(AppSettings.Default with { Theme = ThemeChoice.Light });
-        vm.Theme.ShouldBe(ThemeChoice.Light);
+        var (vm, _) = CreateVmWithStore(AppSettings.Default with { ThemeId = "dracula", ThemeMigrated = true });
+        vm.SelectedThemeId.ShouldBe("dracula");
     }
 
     [Fact]
-    public void Changing_theme_applies_and_persists_immediately()
+    public void First_run_selection_defaults_to_phoenix()
     {
-        // Instant + sticky: raises the apply event for the view AND writes through to the store, off
-        // the stored settings (not the in-progress fields) - independent of Save/Cancel.
-        var (vm, store) = CreateVmWithStore();   // Default -> Theme = Dark
-        ThemeChoice? applied = null;
-        vm.ThemeApplyRequested += (_, c) => applied = c;
-
-        vm.Theme = ThemeChoice.Light;
-
-        applied.ShouldBe(ThemeChoice.Light);
-        store.Received(1).SaveAsync(Arg.Is<AppSettings>(s => s.Theme == ThemeChoice.Light), Arg.Any<CancellationToken>());
+        var (vm, _) = CreateVmWithStore();
+        vm.SelectedThemeId.ShouldBe("phoenix");
     }
 
     [Fact]
-    public async Task Save_carries_the_theme()
+    public void Selecting_a_theme_applies_the_resolved_id_and_persists()
+    {
+        // Instant + sticky: raises the apply event for the view AND writes through to the store.
+        var (vm, store) = CreateVmWithStore();
+        string? applied = null;
+        vm.ThemeApplyRequested += (_, id) => applied = id;
+
+        vm.SelectThemeCommand.Execute("solarized-dark");
+
+        applied.ShouldBe("solarized-dark");
+        store.Received(1).SaveAsync(
+            Arg.Is<AppSettings>(s => s.ThemeId == "solarized-dark" && s.ThemeMigrated), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void Sync_on_applies_the_pair_member_for_the_os_brightness()
+    {
+        var (vm, store) = CreateVmWithStore(osIsDark: () => true); // OS reports dark
+        vm.DarkThemeId = "tokyo-night";
+        string? applied = null;
+        vm.ThemeApplyRequested += (_, id) => applied = id;
+
+        vm.SyncWithOs = true;
+
+        applied.ShouldBe("tokyo-night"); // sync on + OS dark -> the dark pair member
+        store.Received().SaveAsync(Arg.Is<AppSettings>(s => s.SyncWithOs), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void Choosing_pair_themes_persists_them()
     {
         var (vm, store) = CreateVmWithStore();
-        vm.Theme = ThemeChoice.System;
+        vm.LightThemeId = "light-owl";
+        vm.DarkThemeId = "nord";
+
+        store.Received().SaveAsync(Arg.Is<AppSettings>(s => s.LightThemeId == "light-owl"), Arg.Any<CancellationToken>());
+        store.Received().SaveAsync(Arg.Is<AppSettings>(s => s.DarkThemeId == "nord"), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Save_carries_the_theme_fields()
+    {
+        var (vm, store) = CreateVmWithStore();
+        vm.SelectThemeCommand.Execute("gruvbox");
 
         await vm.SaveCommand.ExecuteAsync(null);
 
-        await store.Received().SaveAsync(Arg.Is<AppSettings>(s => s.Theme == ThemeChoice.System), Arg.Any<CancellationToken>());
+        await store.Received().SaveAsync(
+            Arg.Is<AppSettings>(s => s.ThemeId == "gruvbox" && s.ThemeMigrated), Arg.Any<CancellationToken>());
     }
 }
