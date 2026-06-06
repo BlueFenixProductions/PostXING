@@ -22,10 +22,19 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string _authorName = string.Empty;
 
     // --- theme gallery selection. Applies instantly + sticky (ApplyAndPersist), independent of Save/Cancel. ---
-    [ObservableProperty] private string _selectedThemeId = ThemeCatalog.DefaultId;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedThemeObject))]
+    private string _selectedThemeId = ThemeCatalog.DefaultId;
+
     [ObservableProperty] private bool _syncWithOs;
-    [ObservableProperty] private string _lightThemeId = "phoenix-light";
-    [ObservableProperty] private string _darkThemeId = "phoenix";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedLightTheme))]
+    private string _lightThemeId = "phoenix-light";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedDarkTheme))]
+    private string _darkThemeId = "phoenix";
 
     [ObservableProperty] private string _ghAuthDetail = string.Empty;
     [ObservableProperty] private bool _isAuthenticated;
@@ -51,6 +60,28 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public IReadOnlyList<Theme> DarkThemes { get; } =
         ThemeCatalog.All.Where(t => t.Brightness == Brightness.Dark).ToList();
+
+    // Theme-object views over the id fields, so the picker's CollectionView SelectedItem and the
+    // Sync pair Pickers can bind to a Theme. Setting one updates the matching *ThemeId (which fires
+    // apply + persist via OnXxxIdChanged); the [NotifyPropertyChangedFor] on the fields keeps these
+    // in sync when an id changes programmatically.
+    public Theme SelectedThemeObject
+    {
+        get => ThemeCatalog.Get(SelectedThemeId);
+        set { if (value is not null) SelectedThemeId = value.Id; }
+    }
+
+    public Theme SelectedLightTheme
+    {
+        get => ThemeCatalog.Get(LightThemeId);
+        set { if (value is not null) LightThemeId = value.Id; }
+    }
+
+    public Theme SelectedDarkTheme
+    {
+        get => ThemeCatalog.Get(DarkThemeId);
+        set { if (value is not null) DarkThemeId = value.Id; }
+    }
 
     public event EventHandler? CloseRequested;
     public event EventHandler? OpenTerminalRequested;
