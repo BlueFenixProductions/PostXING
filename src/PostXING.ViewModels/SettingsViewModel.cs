@@ -167,8 +167,10 @@ public sealed partial class SettingsViewModel : ObservableObject
             DarkThemeId = DarkThemeId,
             ThemeMigrated = true,
         };
-        ThemeApplyRequested?.Invoke(this, ThemeResolver.Resolve(next, _osIsDark()));
+        // Persist first (SaveAsync sets the store's Current synchronously, before its first await),
+        // then notify - so the view's re-apply reads the just-saved settings.
         _ = _store.SaveAsync(next);
+        ThemeApplyRequested?.Invoke(this, ThemeResolver.Resolve(next, _osIsDark()));
     }
 
     [RelayCommand]
