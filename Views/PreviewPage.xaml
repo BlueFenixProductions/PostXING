@@ -7,19 +7,19 @@
              BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
              Shell.NavBarIsVisible="False"
              Title="Preview">
-    <Grid RowDefinitions="*,Auto">
-        <WebView Grid.Row="0" x:Name="PreviewWebView" BackgroundColor="Transparent"
-                 SemanticProperties.Description="Rendered preview of the current post" />
+  <Grid RowDefinitions="*,Auto">
+    <WebView Grid.Row="0" x:Name="PreviewWebView" BackgroundColor="Transparent"
+             SemanticProperties.Description="Rendered preview of the current post" />
 
-        <Grid Grid.Row="1" Padding="6,4" ColumnDefinitions="Auto,*,Auto">
-            <Button Grid.Column="0" Text="back" Command="{Binding CloseCommand}"
-                    Style="{StaticResource StatusBarButton}"
-                    SemanticProperties.Description="Back to editor" />
-            <Label Grid.Column="1" Style="{StaticResource Kicker}" Text="[ preview ]"
-                   HorizontalOptions="Center" VerticalOptions="Center" />
-            <Button Grid.Column="2" Text="refresh" Command="{Binding RefreshCommand}"
-                    Style="{StaticResource StatusBarButton}"
-                    SemanticProperties.Description="Re-render the preview" />
-        </Grid>
+    <Grid Grid.Row="1" Padding="6,4" ColumnDefinitions="Auto,*,Auto">
+      <Button Grid.Column="0" Text="back" Command="{Binding CloseCommand}"
+              Style="{StaticResource StatusBarButton}"
+              SemanticProperties.Description="Back to editor" />
+      <Label Grid.Column="1" Style="{StaticResource Kicker}" Text="[ preview ]"
+             HorizontalOptions="Center" VerticalOptions="Center" />
+      <Button Grid.Column="2" Text="refresh" Command="{Binding RefreshCommand}"
+              Style="{StaticResource StatusBarButton}"
+              SemanticProperties.Description="Re-render the preview" />
     </Grid>
+  </Grid>
 </ContentPage>

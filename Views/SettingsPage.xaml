@@ -8,176 +8,176 @@
              BackgroundColor="{AppThemeBinding Light={StaticResource Paper100}, Dark={StaticResource Ink950}}"
              Shell.NavBarIsVisible="False"
              Title="Settings">
-    <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="720" HorizontalOptions="Center">
+  <ScrollView>
+    <VerticalStackLayout Padding="24" Spacing="16" MaximumWidthRequest="720" HorizontalOptions="Center">
 
-            <Label Style="{StaticResource Kicker}" Text="[ settings ]"
-                   SemanticProperties.HeadingLevel="Level1" />
+      <Label Style="{StaticResource Kicker}" Text="[ settings ]"
+             SemanticProperties.HeadingLevel="Level1" />
 
-            <!-- Theme: a standard platform RadioButton group (native Material on Android, the
-                 platform control on Windows) - settings chrome follows platform convention, not the
-                 editor's flat-mono idiom. The RadioButtonGroup attached properties bind the group's
-                 selected value straight to the Theme enum (no converter); selecting applies
-                 instantly and persists (SettingsViewModel.OnThemeChanged). -->
-            <Label Style="{StaticResource Kicker}" Text="[ theme ]"
-                   SemanticProperties.HeadingLevel="Level2" />
-            <VerticalStackLayout Spacing="2"
-                                 RadioButtonGroup.GroupName="theme"
-                                 RadioButtonGroup.SelectedValue="{Binding Theme}">
-                <VerticalStackLayout.Resources>
-                    <!-- The default RadioButton renders an opaque row fill that reads as a dark band
-                         on the light canvas. Make the row transparent and theme the label so it sits
-                         on the page background in both modes. -->
-                    <Style TargetType="RadioButton">
-                        <Setter Property="BackgroundColor" Value="Transparent" />
-                        <Setter Property="TextColor"
-                                Value="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
-                    </Style>
-                </VerticalStackLayout.Resources>
-                <RadioButton Content="Light" Value="{x:Static vm:ThemeChoice.Light}"
-                             SemanticProperties.Description="Light theme" />
-                <RadioButton Content="Dark" Value="{x:Static vm:ThemeChoice.Dark}"
-                             SemanticProperties.Description="Dark theme" />
-                <RadioButton Content="System default" Value="{x:Static vm:ThemeChoice.System}"
-                             SemanticProperties.Description="Follow the device theme" />
-            </VerticalStackLayout>
-            <Label Style="{StaticResource FieldCaption}"
-                   Text="dark is the studio default; system follows your device." />
+      <!-- Theme: a standard platform RadioButton group (native Material on Android, the
+           platform control on Windows) - settings chrome follows platform convention, not the
+           editor's flat-mono idiom. The RadioButtonGroup attached properties bind the group's
+           selected value straight to the Theme enum (no converter); selecting applies
+           instantly and persists (SettingsViewModel.OnThemeChanged). -->
+      <Label Style="{StaticResource Kicker}" Text="[ theme ]"
+             SemanticProperties.HeadingLevel="Level2" />
+      <VerticalStackLayout Spacing="2"
+                           RadioButtonGroup.GroupName="theme"
+                           RadioButtonGroup.SelectedValue="{Binding Theme}">
+        <VerticalStackLayout.Resources>
+          <!-- The default RadioButton renders an opaque row fill that reads as a dark band
+               on the light canvas. Make the row transparent and theme the label so it sits
+               on the page background in both modes. -->
+          <Style TargetType="RadioButton">
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}" />
+          </Style>
+        </VerticalStackLayout.Resources>
+        <RadioButton Content="Light" Value="{x:Static vm:ThemeChoice.Light}"
+                     SemanticProperties.Description="Light theme" />
+        <RadioButton Content="Dark" Value="{x:Static vm:ThemeChoice.Dark}"
+                     SemanticProperties.Description="Dark theme" />
+        <RadioButton Content="System default" Value="{x:Static vm:ThemeChoice.System}"
+                     SemanticProperties.Description="Follow the device theme" />
+      </VerticalStackLayout>
+      <Label Style="{StaticResource FieldCaption}"
+             Text="dark is the studio default; system follows your device." />
 
-            <BoxView Style="{StaticResource Hairline}" />
+      <BoxView Style="{StaticResource Hairline}" />
 
-            <Label Style="{StaticResource Kicker}" Text="[ local posts folder ]"
-                   SemanticProperties.HeadingLevel="Level2" />
-            <!-- Windows: typed path. Hidden on Android because typing a content:// SAF URI is
-                 not a user-facing affordance — the Pick folder button below does it instead. -->
-            <Entry Placeholder="C:\path\to\your\posts" Text="{Binding LocalFolder}"
-                   IsVisible="{OnPlatform Default=True, Android=False}"
-                   SemanticProperties.Description="Local posts folder" />
-            <!-- Android-only: SAF Open Document Tree returns a persisted content:// URI. The
-                 picked URI is shown read-only beneath the button so the user can see a folder
-                 is bound; the value lives in LocalFolder either way. -->
-            <Button Text="pick folder..." Command="{Binding PickFolderCommand}"
-                    Style="{StaticResource ButtonGhost}"
-                    IsVisible="{OnPlatform Default=False, Android=True}"
-                    HorizontalOptions="Start"
-                    SemanticProperties.Description="Pick a local posts folder" />
-            <Label Style="{StaticResource FieldCaption}" Text="{Binding LocalFolder}"
-                   IsVisible="{OnPlatform Default=False, Android=True}"
-                   FontFamily="HackRegular"
-                   SemanticProperties.Description="Currently selected local posts folder" />
-            <Label Style="{StaticResource FieldCaption}"
-                   Text="Where you keep your .md files locally. Use your own git client to commit and push." />
+      <Label Style="{StaticResource Kicker}" Text="[ local posts folder ]"
+             SemanticProperties.HeadingLevel="Level2" />
+      <!-- Windows: typed path. Hidden on Android because typing a content:// SAF URI is
+           not a user-facing affordance — the Pick folder button below does it instead. -->
+      <Entry Placeholder="C:\path\to\your\posts" Text="{Binding LocalFolder}"
+             IsVisible="{OnPlatform Default=True, Android=False}"
+             SemanticProperties.Description="Local posts folder" />
+      <!-- Android-only: SAF Open Document Tree returns a persisted content:// URI. The
+           picked URI is shown read-only beneath the button so the user can see a folder
+           is bound; the value lives in LocalFolder either way. -->
+      <Button Text="pick folder..." Command="{Binding PickFolderCommand}"
+              Style="{StaticResource ButtonGhost}"
+              IsVisible="{OnPlatform Default=False, Android=True}"
+              HorizontalOptions="Start"
+              SemanticProperties.Description="Pick a local posts folder" />
+      <Label Style="{StaticResource FieldCaption}" Text="{Binding LocalFolder}"
+             IsVisible="{OnPlatform Default=False, Android=True}"
+             FontFamily="HackRegular"
+             SemanticProperties.Description="Currently selected local posts folder" />
+      <Label Style="{StaticResource FieldCaption}"
+             Text="Where you keep your .md files locally. Use your own git client to commit and push." />
 
-            <!-- GitHub repo + target-branch config. Drives the desktop gh path AND the Android
-                 in-process HTTP gateway, so it's shown on every platform. The branch is the one
-                 the app commits/publishes/merges to in the user's blog repo. -->
-            <VerticalStackLayout Spacing="16">
-                <BoxView Style="{StaticResource Hairline}" />
+      <!-- GitHub repo + target-branch config. Drives the desktop gh path AND the Android
+           in-process HTTP gateway, so it's shown on every platform. The branch is the one
+           the app commits/publishes/merges to in the user's blog repo. -->
+      <VerticalStackLayout Spacing="16">
+        <BoxView Style="{StaticResource Hairline}" />
 
-                <Label Style="{StaticResource Kicker}" Text="[ github repository (optional) ]"
-                       SemanticProperties.HeadingLevel="Level2" />
-                <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
-                    <Entry Grid.Column="0" Placeholder="owner" Text="{Binding Owner}"
-                           SemanticProperties.Description="GitHub repository owner" />
-                    <Label Grid.Column="1" Text="/" VerticalOptions="Center"
-                           FontFamily="HackRegular"
-                           TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
-                    <Entry Grid.Column="2" Placeholder="repo" Text="{Binding Repo}"
-                           SemanticProperties.Description="GitHub repository name" />
-                </Grid>
-                <Label Style="{StaticResource Kicker}" Text="[ integration branch ]"
-                       SemanticProperties.HeadingLevel="Level2" />
-                <Entry Placeholder="develop" Text="{Binding DevelopBranch}"
-                       SemanticProperties.Description="GitHub integration branch" />
+        <Label Style="{StaticResource Kicker}" Text="[ github repository (optional) ]"
+               SemanticProperties.HeadingLevel="Level2" />
+        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
+          <Entry Grid.Column="0" Placeholder="owner" Text="{Binding Owner}"
+                 SemanticProperties.Description="GitHub repository owner" />
+          <Label Grid.Column="1" Text="/" VerticalOptions="Center"
+                 FontFamily="HackRegular"
+                 TextColor="{AppThemeBinding Light={StaticResource SignalCyanDeep}, Dark={StaticResource SignalCyan}}" />
+          <Entry Grid.Column="2" Placeholder="repo" Text="{Binding Repo}"
+                 SemanticProperties.Description="GitHub repository name" />
+        </Grid>
+        <Label Style="{StaticResource Kicker}" Text="[ integration branch ]"
+               SemanticProperties.HeadingLevel="Level2" />
+        <Entry Placeholder="develop" Text="{Binding DevelopBranch}"
+               SemanticProperties.Description="GitHub integration branch" />
 
-                <Label Style="{StaticResource Kicker}" Text="[ content folder (optional) ]"
-                       SemanticProperties.HeadingLevel="Level2" />
-                <Entry Placeholder="e.g. blog  (empty = repo root)" Text="{Binding ContentRoot}"
-                       SemanticProperties.Description="Repo subfolder that holds posts/ and drafts/" />
-                <Label Style="{StaticResource FieldCaption}"
-                       Text="If your posts/ and drafts/ live under a subfolder (e.g. blog/posts/), put that subfolder here." />
-            </VerticalStackLayout>
+        <Label Style="{StaticResource Kicker}" Text="[ content folder (optional) ]"
+               SemanticProperties.HeadingLevel="Level2" />
+        <Entry Placeholder="e.g. blog  (empty = repo root)" Text="{Binding ContentRoot}"
+               SemanticProperties.Description="Repo subfolder that holds posts/ and drafts/" />
+        <Label Style="{StaticResource FieldCaption}"
+               Text="If your posts/ and drafts/ live under a subfolder (e.g. blog/posts/), put that subfolder here." />
+      </VerticalStackLayout>
 
-            <BoxView Style="{StaticResource Hairline}" />
+      <BoxView Style="{StaticResource Hairline}" />
 
-            <Label Style="{StaticResource Kicker}" Text="[ author (default for new posts) ]"
-                   SemanticProperties.HeadingLevel="Level2" />
-            <Entry Placeholder="Your name" Text="{Binding AuthorName}"
-                   SemanticProperties.Description="Default author name for new posts" />
+      <Label Style="{StaticResource Kicker}" Text="[ author (default for new posts) ]"
+             SemanticProperties.HeadingLevel="Level2" />
+      <Entry Placeholder="Your name" Text="{Binding AuthorName}"
+             SemanticProperties.Description="Default author name for new posts" />
 
-            <!-- The gh CLI status + in-app terminal don't exist on Android (no gh binary); hidden there. -->
-            <VerticalStackLayout Spacing="16" IsVisible="{OnPlatform Default=True, Android=False}">
-                <BoxView Style="{StaticResource Hairline}" />
+      <!-- The gh CLI status + in-app terminal don't exist on Android (no gh binary); hidden there. -->
+      <VerticalStackLayout Spacing="16" IsVisible="{OnPlatform Default=True, Android=False}">
+        <BoxView Style="{StaticResource Hairline}" />
 
-                <Label Style="{StaticResource Kicker}" Text="[ github cli ]"
-                       SemanticProperties.HeadingLevel="Level2" />
-                <Label Style="{StaticResource FieldCaption}" Text="{Binding GhAuthDetail}" FontFamily="HackRegular"
-                       SemanticProperties.Description="gh authentication status detail" />
-                <HorizontalStackLayout Spacing="8">
-                    <Button Text="open gh terminal" Command="{Binding OpenTerminalCommand}"
-                            Style="{StaticResource ButtonGhost}"
-                            SemanticProperties.Description="Open gh terminal" />
-                    <Button Text="re-check status" Command="{Binding CheckAuthCommand}"
-                            Style="{StaticResource ButtonGhost}"
-                            SemanticProperties.Description="Re-check gh authentication status" />
-                </HorizontalStackLayout>
-                <Label Style="{StaticResource FieldCaption}"
-                       Text="The gh terminal lets you run gh CLI commands without leaving the app. You don't need gh installed if you only use the local folder workflow above." />
-            </VerticalStackLayout>
+        <Label Style="{StaticResource Kicker}" Text="[ github cli ]"
+               SemanticProperties.HeadingLevel="Level2" />
+        <Label Style="{StaticResource FieldCaption}" Text="{Binding GhAuthDetail}" FontFamily="HackRegular"
+               SemanticProperties.Description="gh authentication status detail" />
+        <HorizontalStackLayout Spacing="8">
+          <Button Text="open gh terminal" Command="{Binding OpenTerminalCommand}"
+                  Style="{StaticResource ButtonGhost}"
+                  SemanticProperties.Description="Open gh terminal" />
+          <Button Text="re-check status" Command="{Binding CheckAuthCommand}"
+                  Style="{StaticResource ButtonGhost}"
+                  SemanticProperties.Description="Re-check gh authentication status" />
+        </HorizontalStackLayout>
+        <Label Style="{StaticResource FieldCaption}"
+               Text="The gh terminal lets you run gh CLI commands without leaving the app. You don't need gh installed if you only use the local folder workflow above." />
+      </VerticalStackLayout>
 
-            <!-- Android: no gh CLI to inherit a credential from, so the user supplies a GitHub
-                 token directly. Hidden on Windows (which uses the gh terminal section above). -->
-            <VerticalStackLayout Spacing="16" IsVisible="{OnPlatform Default=False, Android=True}">
-                <BoxView Style="{StaticResource Hairline}" />
+      <!-- Android: no gh CLI to inherit a credential from, so the user supplies a GitHub
+           token directly. Hidden on Windows (which uses the gh terminal section above). -->
+      <VerticalStackLayout Spacing="16" IsVisible="{OnPlatform Default=False, Android=True}">
+        <BoxView Style="{StaticResource Hairline}" />
 
-                <Label Style="{StaticResource Kicker}" Text="[ github account ]"
-                       SemanticProperties.HeadingLevel="Level2" />
-                <Label Style="{StaticResource FieldCaption}" Text="{Binding GhAuthDetail}" FontFamily="HackRegular"
-                       SemanticProperties.Description="GitHub authentication status" />
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <Entry Grid.Column="0" Placeholder="Paste a GitHub token (ghp_...)" Text="{Binding TokenInput}"
-                           IsPassword="{Binding MaskToken}" FontFamily="HackRegular"
-                           SemanticProperties.Description="GitHub personal access token" />
-                    <!-- Reveal/hide the token (MDI eye / eye-off) so the user can verify the paste. -->
-                    <Grid Grid.Column="1" WidthRequest="36" HeightRequest="36" VerticalOptions="Center"
-                          SemanticProperties.Description="Show or hide the token">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding ToggleTokenVisibilityCommand}" />
-                        </Grid.GestureRecognizers>
-                        <shapes:Path Aspect="Uniform" HeightRequest="22" WidthRequest="22"
-                                     VerticalOptions="Center" HorizontalOptions="Center"
-                                     IsVisible="{Binding MaskToken}"
-                                     Fill="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
-                                     Data="M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
-                        <shapes:Path Aspect="Uniform" HeightRequest="22" WidthRequest="22"
-                                     VerticalOptions="Center" HorizontalOptions="Center"
-                                     IsVisible="{Binding ShowToken}"
-                                     Fill="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
-                                     Data="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z" />
-                    </Grid>
-                </Grid>
-                <HorizontalStackLayout Spacing="8">
-                    <Button Text="connect" Command="{Binding PasteTokenCommand}"
-                            Style="{StaticResource ButtonGhost}"
-                            SemanticProperties.Description="Connect with the pasted token" />
-                    <Button Text="disconnect" Command="{Binding DisconnectCommand}"
-                            Style="{StaticResource ButtonGhost}"
-                            SemanticProperties.Description="Forget the stored token" />
-                </HorizontalStackLayout>
-                <Label Style="{StaticResource FieldCaption}"
-                       Text="Use a fine-grained token with Contents and Pull requests read/write on your blog repo. It's stored in this device's secure keystore, never in the repo." />
-            </VerticalStackLayout>
+        <Label Style="{StaticResource Kicker}" Text="[ github account ]"
+               SemanticProperties.HeadingLevel="Level2" />
+        <Label Style="{StaticResource FieldCaption}" Text="{Binding GhAuthDetail}" FontFamily="HackRegular"
+               SemanticProperties.Description="GitHub authentication status" />
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <Entry Grid.Column="0" Placeholder="Paste a GitHub token (ghp_...)" Text="{Binding TokenInput}"
+                 IsPassword="{Binding MaskToken}" FontFamily="HackRegular"
+                 SemanticProperties.Description="GitHub personal access token" />
+          <!-- Reveal/hide the token (MDI eye / eye-off) so the user can verify the paste. -->
+          <Grid Grid.Column="1" WidthRequest="36" HeightRequest="36" VerticalOptions="Center"
+                SemanticProperties.Description="Show or hide the token">
+            <Grid.GestureRecognizers>
+              <TapGestureRecognizer Command="{Binding ToggleTokenVisibilityCommand}" />
+            </Grid.GestureRecognizers>
+            <shapes:Path Aspect="Uniform" HeightRequest="22" WidthRequest="22"
+                         VerticalOptions="Center" HorizontalOptions="Center"
+                         IsVisible="{Binding MaskToken}"
+                         Fill="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
+                         Data="M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" />
+            <shapes:Path Aspect="Uniform" HeightRequest="22" WidthRequest="22"
+                         VerticalOptions="Center" HorizontalOptions="Center"
+                         IsVisible="{Binding ShowToken}"
+                         Fill="{AppThemeBinding Light={StaticResource Ink950}, Dark={StaticResource Paper300}}"
+                         Data="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z" />
+          </Grid>
+        </Grid>
+        <HorizontalStackLayout Spacing="8">
+          <Button Text="connect" Command="{Binding PasteTokenCommand}"
+                  Style="{StaticResource ButtonGhost}"
+                  SemanticProperties.Description="Connect with the pasted token" />
+          <Button Text="disconnect" Command="{Binding DisconnectCommand}"
+                  Style="{StaticResource ButtonGhost}"
+                  SemanticProperties.Description="Forget the stored token" />
+        </HorizontalStackLayout>
+        <Label Style="{StaticResource FieldCaption}"
+               Text="Use a fine-grained token with Contents and Pull requests read/write on your blog repo. It's stored in this device's secure keystore, never in the repo." />
+      </VerticalStackLayout>
 
-            <BoxView Style="{StaticResource Hairline}" />
+      <BoxView Style="{StaticResource Hairline}" />
 
-            <HorizontalStackLayout Spacing="12" HorizontalOptions="End">
-                <Button Text="cancel" Command="{Binding CancelCommand}"
-                        Style="{StaticResource ButtonGhost}"
-                        SemanticProperties.Description="Cancel settings" />
-                <Button Text="save" Command="{Binding SaveCommand}"
-                        Style="{StaticResource ButtonPrimary}"
-                        SemanticProperties.Description="Save settings" />
-            </HorizontalStackLayout>
-        </VerticalStackLayout>
-    </ScrollView>
+      <HorizontalStackLayout Spacing="12" HorizontalOptions="End">
+        <Button Text="cancel" Command="{Binding CancelCommand}"
+                Style="{StaticResource ButtonGhost}"
+                SemanticProperties.Description="Cancel settings" />
+        <Button Text="save" Command="{Binding SaveCommand}"
+                Style="{StaticResource ButtonPrimary}"
+                SemanticProperties.Description="Save settings" />
+      </HorizontalStackLayout>
+    </VerticalStackLayout>
+  </ScrollView>
 </ContentPage>
