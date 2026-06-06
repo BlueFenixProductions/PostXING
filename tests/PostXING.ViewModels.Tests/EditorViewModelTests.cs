@@ -1,4 +1,5 @@
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using PostXING.Core.Domain;
 using PostXING.GitHub;
 using PostXING.Markdown;
@@ -296,5 +297,109 @@ public sealed class EditorViewModelTests
     {
         var vm = GitHubVm(out _);
         vm.MergeCommand.CanExecute(null).ShouldBeFalse();
+    }
+
+    // ---- Malformed front matter while typing must not crash the editor ----
+    //
+    // OnRawMarkdownChanged runs on every keystroke. While the user is mid-edit the YAML front
+    // matter is routinely, transiently invalid (an unterminated quote, a half-typed list) and the
+    // parser throws out of Parse. That exception used to propagate out of the RawMarkdown setter:
+    // on desktop it escaped the async-void WebView "change" handler (crash); on Android it re-threw
+    // out of the ~750ms dirty-poll every tick (PXBRIDGE log spam + frozen WordCount/FrontMatter).
+    // The setter must swallow the failure, keep the last-good FrontMatter, and keep the count live.
+
+    private static EditorViewModel NewVm(IFrontMatterParser parser)
+    {
+        var gateway = Substitute.For<IGitHubGateway>();
+        gateway.CheckAuthAsync(Arg.Any<CancellationToken>()).Returns(new GhAuthStatus(false, null, "stubbed"));
+        var settings = Substitute.For<ISettingsStore>();
+        settings.Current.Returns(AppSettings.Default);
+        var local = Substitute.For<ILocalPostStore>();
+        return new EditorViewModel(parser, gateway, settings, local, TimeProvider.System, StubGit(), new GitHubPublishService(gateway));
+    }
+
+    [Fact]
+    public void Typing_malformed_frontmatter_does_not_throw_out_of_the_RawMarkdown_setter()
+    {
+        const string malformed =
+            "---\n" +
+            "title: \"half-typed quote\n" +   // opens a double-quoted scalar that never closes
+            "---\n\n" +
+            "body text\n";
+
+        // Guard: the real parser genuinely throws on this input, so the assertion below isn't vacuous.
+        Should.Throw<Exception>(() => new YamlFrontMatterParser().Parse(malformed));
+
+        var vm = NewVm(new YamlFrontMatterParser());
+        vm.CancelTitlePromptCommand.Execute(null);
+        vm.IsDirty = false;
+
+        Should.NotThrow(() => vm.RawMarkdown = malformed);
+
+        vm.IsDirty.ShouldBeTrue("a keystroke still marks the buffer dirty even when the YAML can't parse");
+        vm.RawMarkdown.ShouldBe(malformed);
+    }
+
+    [Fact]
+    public void Malformed_frontmatter_keeps_the_word_count_live_over_the_raw_buffer()
+    {
+        // 7 whitespace-separated tokens across the whole buffer (---, oops:, "unterminated, ---,
+        // alpha, beta, gamma). With the front matter unparseable we can't split it from the body,
+        // so the whole raw buffer is counted -- the point is the count stays live, not frozen at 0.
+        const string malformed =
+            "---\n" +
+            "oops: \"unterminated\n" +
+            "---\n" +
+            "alpha beta gamma\n";
+
+        var vm = NewVm(new YamlFrontMatterParser());
+        vm.CancelTitlePromptCommand.Execute(null);
+
+        vm.RawMarkdown = malformed;
+
+        vm.WordCount.ShouldBe(7);
+        vm.ReadingTimeMinutes.ShouldBe(1);
+    }
+
+    [Fact]
+    public void Valid_frontmatter_after_a_malformed_edit_recovers_the_metadata()
+    {
+        var vm = NewVm(new YamlFrontMatterParser());
+        vm.CancelTitlePromptCommand.Execute(null);
+
+        // 1) a clean document parses normally
+        vm.RawMarkdown = "---\ntitle: Alpha\n---\n\nfirst body\n";
+        vm.FrontMatter.Title.ShouldBe("Alpha");
+
+        // 2) the YAML goes transiently invalid: no throw, and the last-good title is retained
+        vm.RawMarkdown = "---\ntitle: \"Alpha and then some\n---\n\nstill editing\n";
+        vm.FrontMatter.Title.ShouldBe("Alpha", "a transient parse failure keeps the last-good front matter");
+
+        // 3) the YAML is valid again: metadata recovers from the new front matter
+        vm.RawMarkdown = "---\ntitle: Bravo\n---\n\nrecovered body here\n";
+        vm.FrontMatter.Title.ShouldBe("Bravo");
+        vm.WordCount.ShouldBe(3, "the body word count tracks the recovered document");
+    }
+
+    [Fact]
+    public void Any_parser_exception_is_swallowed_and_the_last_good_frontmatter_is_kept()
+    {
+        // The VM defends against *any* IFrontMatterParser throwing, not just YamlDotNet -- the
+        // interface doesn't promise Parse won't throw, so the setter must never let it escape.
+        var parser = Substitute.For<IFrontMatterParser>();
+        parser.Parse(Arg.Any<string>()).Returns(new ParsedDocument(FrontMatter.Default.WithTitle("Good"), "good body"));
+        var vm = NewVm(parser);
+        vm.CancelTitlePromptCommand.Execute(null);
+
+        vm.RawMarkdown = "anything";
+        vm.FrontMatter.Title.ShouldBe("Good");
+
+        parser.Parse("now totally broken text").Throws(new InvalidOperationException("kaboom"));
+
+        Should.NotThrow(() => vm.RawMarkdown = "now totally broken text");
+
+        vm.FrontMatter.Title.ShouldBe("Good", "the last-good front matter survives a parse failure");
+        vm.IsDirty.ShouldBeTrue();
+        vm.WordCount.ShouldBe(4, "word count falls back to the raw buffer (now, totally, broken, text)");
     }
 }
