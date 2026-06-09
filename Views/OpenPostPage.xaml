@@ -50,40 +50,45 @@
     <Label Grid.Row="0" Style="{StaticResource Kicker}" Text="[ open post ]"
            SemanticProperties.HeadingLevel="Level1" />
 
-    <CollectionView Grid.Row="1"
-                    x:Name="EntriesView"
-                    ItemsSource="{Binding Entries}"
-                    SelectionMode="Single"
-                    SelectionChanged="OnEntrySelected"
-                    SemanticProperties.Description="Available posts">
-      <CollectionView.ItemTemplate>
-        <DataTemplate x:DataType="vm:PostEntry">
-          <!-- Swipe a row left to reveal Delete (idiomatic on Android; also works on
-               Windows via drag). Tap still opens the post - SwipeView passes taps through
-               to its content, so there's no tap-vs-select conflict. The inner Grid needs an
-               opaque background or the row content shows through the revealed delete item. -->
-          <SwipeView>
-            <SwipeView.RightItems>
-              <SwipeItems Mode="Reveal">
-                <SwipeItem Text="delete"
-                           BackgroundColor="#B3261E"
-                           CommandParameter="{Binding .}"
-                           Invoked="OnDeleteSwipeInvoked" />
-              </SwipeItems>
-            </SwipeView.RightItems>
-            <Grid Padding="8,4" ColumnDefinitions="*,Auto" ColumnSpacing="12"
-                  BackgroundColor="{DynamicResource Surface}">
-              <Label Grid.Column="0" Text="{Binding DisplayName}" FontSize="13" FontFamily="HackRegular"
-                     TextColor="{DynamicResource OnSurface}" />
-              <Label Grid.Column="1" Text="{Binding Tag}" FontSize="11" FontFamily="HackRegular"
-                     CharacterSpacing="2"
-                     TextColor="{DynamicResource OnSurfaceVariant}"
-                     VerticalOptions="Center" />
-            </Grid>
-          </SwipeView>
-        </DataTemplate>
-      </CollectionView.ItemTemplate>
-    </CollectionView>
+    <!-- Pull down to refresh: re-lists local + GitHub and re-runs the sync chip; the
+         RefreshView spinner is the visual cue that a sync happened (gh #49). -->
+    <RefreshView Grid.Row="1"
+                 Command="{Binding RefreshCommand}"
+                 IsRefreshing="{Binding IsRefreshing}">
+      <CollectionView x:Name="EntriesView"
+                      ItemsSource="{Binding Entries}"
+                      SelectionMode="Single"
+                      SelectionChanged="OnEntrySelected"
+                      SemanticProperties.Description="Available posts">
+        <CollectionView.ItemTemplate>
+          <DataTemplate x:DataType="vm:PostEntry">
+            <!-- Swipe a row left to reveal Delete (idiomatic on Android; also works on
+                 Windows via drag). Tap still opens the post - SwipeView passes taps through
+                 to its content, so there's no tap-vs-select conflict. The inner Grid needs an
+                 opaque background or the row content shows through the revealed delete item. -->
+            <SwipeView>
+              <SwipeView.RightItems>
+                <SwipeItems Mode="Reveal">
+                  <SwipeItem Text="delete"
+                             BackgroundColor="#B3261E"
+                             CommandParameter="{Binding .}"
+                             Invoked="OnDeleteSwipeInvoked" />
+                </SwipeItems>
+              </SwipeView.RightItems>
+              <Grid Padding="8,4" ColumnDefinitions="*,Auto" ColumnSpacing="12"
+                    BackgroundColor="{DynamicResource Surface}">
+                <Label Grid.Column="0" Text="{Binding DisplayName}" FontSize="13" FontFamily="HackRegular"
+                       TextColor="{DynamicResource OnSurface}" />
+                <Label Grid.Column="1" Text="{Binding Tag}" FontSize="11" FontFamily="HackRegular"
+                       CharacterSpacing="2"
+                       TextColor="{DynamicResource OnSurfaceVariant}"
+                       VerticalOptions="Center" />
+              </Grid>
+            </SwipeView>
+          </DataTemplate>
+        </CollectionView.ItemTemplate>
+      </CollectionView>
+    </RefreshView>
 
     <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="0">
       <HorizontalStackLayout Grid.Column="0" Spacing="16">

@@ -123,6 +123,19 @@ public sealed class OpenPostViewModelTests
     }
 
     [Fact]
+    public async Task RefreshAsync_clears_IsRefreshing_so_the_pull_to_refresh_spinner_stops()
+    {
+        // The RefreshView sets IsRefreshing=true on a user pull; the command must clear it when
+        // the GitHub-syncing reload finishes, or the spinner spins forever (gh #49).
+        var (vm, _, _, _) = CreateVm();
+        vm.IsRefreshing = true;
+
+        await vm.RefreshAsync();
+
+        vm.IsRefreshing.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task GitHub_posts_sort_by_filename_date_and_undated_drafts_sink()
     {
         var (vm, gateway, settings, _) = CreateVm();

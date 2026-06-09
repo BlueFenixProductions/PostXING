@@ -20,6 +20,10 @@ public sealed partial class OpenPostViewModel : ObservableObject
     private bool _navigated;
 
     [ObservableProperty] private bool _isBusy;
+
+    // Two-way bound to the OpenPostPage RefreshView: the pull gesture sets this true and fires
+    // RefreshCommand; RefreshAsync clears it when the GitHub-syncing reload finishes (gh #49).
+    [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private string _statusMessage = string.Empty;
 
     [ObservableProperty] private RepoSyncState _syncState = RepoSyncState.Unknown;
@@ -141,7 +145,7 @@ public sealed partial class OpenPostViewModel : ObservableObject
             else
                 StatusMessage = string.Join(", ", sources);
         }
-        finally { IsBusy = false; }
+        finally { IsBusy = false; IsRefreshing = false; }
     }
 
     // Published posts are named "posts/{yyyy-MM-dd}-{slug}.md"; the leading date is the only
