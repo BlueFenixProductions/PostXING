@@ -280,10 +280,18 @@ public sealed partial class EditorViewModel : ObservableObject
         var post = new Post(slug, FrontMatter, published, today);
         var site = SiteConfig.For(s.Owner!, s.Repo!) with { DevelopBranch = s.DevelopBranch, ContentRoot = s.ContentRoot };
 
+        // Re-publishing an already-published GitHub post: reuse its original posts/ path so the edit
+        // updates that file instead of minting a new today-dated duplicate (gh #48). Drafts/New stay null.
+        var existingPostPath =
+            _handle.Source == PostSource.GitHub
+            && _handle.Identifier.StartsWith(site.PostsPrefix, StringComparison.Ordinal)
+                ? _handle.Identifier
+                : null;
+
         SaveStatus = "Publishing...";
         try
         {
-            var state = await _publishService.PublishAsync(post, site, published, autoMerge: false);
+            var state = await _publishService.PublishAsync(post, site, published, autoMerge: false, existingPostPath: existingPostPath);
             PendingPullRequest = state.PullRequestNumber;
             SaveStatus = DescribePublishState(state);
             if (state.Kind != PublishKind.Failed) IsDirty = false;

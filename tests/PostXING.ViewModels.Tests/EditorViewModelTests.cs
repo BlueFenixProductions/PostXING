@@ -297,4 +297,34 @@ public sealed class EditorViewModelTests
         var vm = GitHubVm(out _);
         vm.MergeCommand.CanExecute(null).ShouldBeFalse();
     }
+
+    [Fact]
+    public async Task Republishing_an_already_published_github_post_updates_its_original_path_not_a_duplicate()
+    {
+        // gh #48: open a post already published under posts/ (old date), edit, re-publish — the edit
+        // must update that original file, not mint a new today-dated "hello-world" duplicate.
+        var vm = GitHubVm(out var gw);
+        vm.LoadPost(PostHandle.FromGitHubPath("posts/2024-01-15-original-slug.md"),
+            "---\ntitle: \"Hello World\"\ndraft: false\n---\n\n# Hi, edited\n");
+
+        await vm.PublishCommand.ExecuteAsync(null);
+
+        gw.WrittenPaths().ShouldContain("posts/2024-01-15-original-slug.md");
+        gw.WrittenPaths().ShouldNotContain(p => p.Contains("hello-world", StringComparison.Ordinal),
+            "a re-published post must not create a second, today-dated file");
+    }
+
+    [Fact]
+    public async Task Publishing_a_github_draft_mints_a_new_dated_post_path()
+    {
+        // A draft (drafts/…) being published for the first time still gets a today-dated posts/ path.
+        var vm = GitHubVm(out var gw);
+        vm.LoadPost(PostHandle.FromGitHubPath("drafts/hello-world.md"),
+            "---\ntitle: \"Hello World\"\ndraft: true\n---\n\n# Hi\n");
+
+        await vm.PublishCommand.ExecuteAsync(null);
+
+        gw.WrittenPaths().ShouldContain(p => p.StartsWith("posts/", StringComparison.Ordinal)
+            && p.EndsWith("-hello-world.md", StringComparison.Ordinal));
+    }
 }
