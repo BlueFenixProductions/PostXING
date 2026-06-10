@@ -46,7 +46,8 @@ public sealed partial class PreviewViewModel : ObservableObject
         {
             var p = Theme.Preview;
             Html = _renderer.Build(_markdown, _styles.GithubMarkdownCss(Dark),
-                p.Canvas, p.Fg, p.Accent, p.Link, p.CodeBg, p.Border);
+                p.Canvas, p.Fg, p.Accent, p.Link, p.CodeBg, p.Border,
+                _styles.HighlightJs(), _styles.HighlightThemeCss(Dark));
         }
         finally { IsBusy = false; }
         return Task.CompletedTask;

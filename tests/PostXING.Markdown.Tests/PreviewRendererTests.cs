@@ -24,6 +24,32 @@ public sealed class PreviewRendererTests
     }
 
     [Fact]
+    public void Hljs_script_theme_and_bootstrap_injected_when_assets_supplied()
+    {
+        var html = _sut.Build("x", "",
+            canvas: "#000", fg: "#fff", accent: "#00f", link: "#00f", codeBg: "#111", border: "#333",
+            hljsJs: "HLJS_JS_MARKER", hljsThemeCss: "HLJS_THEME_MARKER");
+
+        html.ShouldContain("HLJS_JS_MARKER");        // the highlight.js library, inlined
+        html.ShouldContain("HLJS_THEME_MARKER");     // the theme stylesheet, inlined
+        html.ShouldContain("hljs.highlightAll");     // the bootstrap that colorizes on load
+    }
+
+    [Fact]
+    public void Fenced_code_carries_a_language_class_for_hljs_to_read()
+    {
+        _sut.Build("```csharp\nvar x = 1;\n```", "").ShouldContain("language-csharp");
+    }
+
+    [Fact]
+    public void Hljs_bootstrap_is_omitted_when_no_assets_supplied()
+    {
+        // Back-compat: a render with no hljs assets must not emit a bootstrap that would
+        // throw "hljs is not defined" in the WebView.
+        _sut.Build("x", "").ShouldNotContain("hljs.highlightAll");
+    }
+
+    [Fact]
     public void Inline_html_in_body_is_preserved()
     {
         _sut.Build("a <br/> b", "").ShouldContain("<br");
