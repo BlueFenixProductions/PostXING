@@ -78,4 +78,9 @@ public sealed class InMemoryGitHubGateway : IGitHubGateway
 
     public Task<GhAuthStatus> CheckAuthAsync(CancellationToken ct = default)
         => Task.FromResult(new GhAuthStatus(true, "test-user", "in-memory gateway"));
+
+    /// <summary>Test inspection: every distinct file path written across all branches. Lets a test
+    /// assert what a publish wrote without knowing the ephemeral post/ branch name.</summary>
+    public IReadOnlyList<string> WrittenPaths() =>
+        _files.Keys.Select(k => k.path).Distinct().OrderBy(p => p, StringComparer.Ordinal).ToList();
 }

@@ -12,6 +12,7 @@ public sealed class GitHubPublishService(IGitHubGateway gateway, TimeProvider? c
         SiteConfig site,
         string renderedDocument,
         bool autoMerge,
+        string? existingPostPath = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(post);
@@ -21,12 +22,17 @@ public sealed class GitHubPublishService(IGitHubGateway gateway, TimeProvider? c
         var state = PublishState.Initial;
 
         var baseSha = await gateway.GetBranchShaAsync(site.Owner, site.Repo, site.DevelopBranch, ct);
-        var publishDate = DateOnly.FromDateTime(_clock.GetUtcNow().UtcDateTime);
-        var branchName = $"post/{post.Slug.Value}-{publishDate.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}";
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var publishDate = DateOnly.FromDateTime(now);
+        // Second precision so two re-publishes of the same post on the same day don't collide on
+        // an identical ephemeral branch name (gh #48). The branch is throwaway; only the post path is stable.
+        var branchName = $"post/{post.Slug.Value}-{now.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture)}";
         await gateway.CreateBranchAsync(site.Owner, site.Repo, branchName, baseSha, ct);
         state = state.WithBranch(branchName);
 
-        var postPath = $"{site.PostsPrefix}{publishDate:yyyy-MM-dd}-{post.Slug.Value}.md";
+        // Re-publishing an already-published post writes back to its original path (permalink stability);
+        // a first publish (existingPostPath null) mints a today-dated path (gh #48).
+        var postPath = existingPostPath ?? $"{site.PostsPrefix}{publishDate:yyyy-MM-dd}-{post.Slug.Value}.md";
         var commitMessage = $"post: {post.FrontMatter.Title} ({post.Slug.Value})";
         await gateway.UpsertFileAsync(site.Owner, site.Repo, branchName, postPath, renderedDocument, commitMessage, null, ct);
 
