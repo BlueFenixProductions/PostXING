@@ -27,20 +27,23 @@ public sealed class PreviewRenderer
 
     /// <summary>Back-compat brightness overload (GitHub light/dark canvas). Delegates to the
     /// palette overload with the GitHub colorblind canvas/fg/accent/border for that brightness.</summary>
-    public string Build(string markdown, string githubCss, bool dark = false) =>
+    public string Build(string markdown, string githubCss, bool dark = false,
+        string? hljsJs = null, string? hljsThemeCss = null) =>
         Build(markdown, githubCss,
             canvas: dark ? "#0d1117" : "#ffffff",
             fg: dark ? "#f0f6fc" : "#1f2328",
             accent: dark ? "#1f6feb" : "#0969da",
             link: dark ? "#1f6feb" : "#0969da",
             codeBg: dark ? "#161b22" : "#f6f8fa",
-            border: dark ? "#30363d" : "#d0d7de");
+            border: dark ? "#30363d" : "#d0d7de",
+            hljsJs: hljsJs, hljsThemeCss: hljsThemeCss);
 
     /// <summary>Render the preview with an explicit theme palette layered over the bundled github CSS,
     /// so any of the gallery themes color the canvas, text, links, code blocks, and borders. Markdown
     /// can't reference the ViewModels' PreviewPalette type, so the caller unpacks it into plain strings.</summary>
     public string Build(string markdown, string githubCss,
-        string canvas, string fg, string accent, string link, string codeBg, string border)
+        string canvas, string fg, string accent, string link, string codeBg, string border,
+        string? hljsJs = null, string? hljsThemeCss = null)
     {
         var (frontmatter, body) = Split(markdown ?? string.Empty);
         var bodyHtml = Markdig.Markdown.ToHtml(body, _pipeline);
@@ -64,10 +67,19 @@ public sealed class PreviewRenderer
           .Append(".markdown-body code,.markdown-body pre{background-color:").Append(codeBg).Append(";}")
           .Append(".markdown-body table th,.markdown-body table td{color:").Append(fg)
           .Append(";border-color:").Append(border).Append(";}</style>");
+        // highlight.js theme stylesheet, inlined after the github CSS so it styles the token spans
+        // hljs adds inside <pre><code> at load time (gh #23). Empty when no highlighter is wired.
+        if (!string.IsNullOrEmpty(hljsThemeCss))
+            sb.Append("<style>").Append(hljsThemeCss).Append("</style>");
         sb.Append("</head><body><article class=\"markdown-body\">");
         sb.Append(fmTable);
         sb.Append(bodyHtml);
-        sb.Append("</article></body></html>");
+        sb.Append("</article>");
+        // The highlight.js library + a bootstrap that colorizes every <pre><code> on load. It's a
+        // self-contained script (no HybridWebView host bridge), so it runs identically on Android.
+        if (!string.IsNullOrEmpty(hljsJs))
+            sb.Append("<script>").Append(hljsJs).Append("</script><script>hljs.highlightAll();</script>");
+        sb.Append("</body></html>");
         return sb.ToString();
     }
 

@@ -13,11 +13,21 @@ public sealed class PreviewStyles : IPreviewStyles
 {
     private string? _dark;
     private string? _light;
+    private string? _hljsJs;
+    private string? _hljsDark;
+    private string? _hljsLight;
 
     public string GithubMarkdownCss(bool dark) =>
         dark
             ? _dark ??= Read("github-markdown-dark-colorblind.css")
             : _light ??= Read("github-markdown-light-colorblind.css");
+
+    public string HighlightJs() => _hljsJs ??= Read("highlight.min.js");
+
+    public string HighlightThemeCss(bool dark) =>
+        dark
+            ? _hljsDark ??= Read("highlight-github-dark.css")
+            : _hljsLight ??= Read("highlight-github.css");
 
     private static string Read(string file)
     {

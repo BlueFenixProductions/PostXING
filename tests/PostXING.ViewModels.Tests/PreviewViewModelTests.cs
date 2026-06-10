@@ -59,6 +59,25 @@ public sealed class PreviewViewModelTests
     }
 
     [Fact]
+    public async Task Dark_render_wires_the_dark_hljs_library_and_theme()
+    {
+        var styles = Substitute.For<IPreviewStyles>();
+        styles.GithubMarkdownCss(true).Returns("DARK_GITHUB_CSS");
+        styles.HighlightJs().Returns("HLJS_LIBRARY");
+        styles.HighlightThemeCss(true).Returns("HLJS_DARK_THEME");
+        var vm = new PreviewViewModel(new PreviewRenderer(), styles);
+        vm.SetMarkdown("```csharp\nvar x = 1;\n```");
+        vm.Dark = true;
+
+        await vm.RefreshAsync();
+
+        vm.Html.ShouldContain("HLJS_LIBRARY");
+        vm.Html.ShouldContain("HLJS_DARK_THEME");
+        vm.Html.ShouldContain("hljs.highlightAll");
+        vm.Html.ShouldContain("language-csharp");
+    }
+
+    [Fact]
     public async Task Renders_frontmatter_as_a_table()
     {
         var vm = Create();
