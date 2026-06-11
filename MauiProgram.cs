@@ -23,6 +23,9 @@ public static class MauiProgram
             {
                 fonts.AddFont("Hack-Regular.ttf", "HackRegular");
                 fonts.AddFont("Hack-Bold.ttf", "HackBold");
+                // Subsetted Material Design Icons (microphone glyph U+F036C only, ~840 bytes) for
+                // the dictation cue (#14) — not the full ~1.3 MB MDI webfont.
+                fonts.AddFont("mdi-microphone.ttf", "MaterialIcons");
             });
 
 #if DEBUG

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Devices;
 using Microsoft.Maui.Storage;
 using PostXING.App.Services;
 using PostXING.ViewModels;
@@ -262,6 +263,39 @@ public partial class EditorPage : ContentPage
             accept: "commit", cancel: "cancel",
             initialValue: "WIP draft", maxLength: 240);
         return string.IsNullOrWhiteSpace(msg) ? null : msg;
+    }
+
+    // Dictation cue (#14): PostXING has no speech engine — dictation is the OS's own feature
+    // (Windows Win+H, the Android keyboard mic). The mic icon focuses the editor so dictation
+    // lands in it, then shows a transient how-to hint. Both the Windows status-bar Path (Tapped)
+    // and the Android toolbar item (Clicked) route here.
+    private void OnDictateTapped(object? sender, TappedEventArgs e) => _ = ShowDictationHintAsync();
+    private void OnDictateClicked(object? sender, EventArgs e) => _ = ShowDictationHintAsync();
+
+    private bool _dictationHintBusy;
+    private async Task ShowDictationHintAsync()
+    {
+        if (_dictationHintBusy) return;
+        _dictationHintBusy = true;
+        try
+        {
+            // Focus the editor via the existing JS hook so dictation deposits text into it.
+            // Fire-and-forget: EvaluateJavaScriptAsync can hang on Android, but the JS still runs.
+            try { _ = EditorWebView.EvaluateJavaScriptAsync("if(window.PostXING){window.PostXING.focus()}"); }
+            catch { /* focus is best-effort */ }
+
+            var platform = DeviceInfo.Platform == DevicePlatform.WinUI ? DictationPlatform.Windows
+                         : DeviceInfo.Platform == DevicePlatform.Android ? DictationPlatform.Android
+                         : DictationPlatform.Other;
+            DictationHintLabel.Text = DictationHints.For(platform);
+
+            DictationHint.IsVisible = true;
+            await DictationHint.FadeToAsync(1, 150);
+            await Task.Delay(2500);
+            await DictationHint.FadeToAsync(0, 250);
+            DictationHint.IsVisible = false;
+        }
+        finally { _dictationHintBusy = false; }
     }
 
 #if ANDROID
