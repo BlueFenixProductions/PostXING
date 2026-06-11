@@ -61,6 +61,14 @@
        nav bar, shown only on Android (Shell.NavBarIsVisible above); on Windows the nav bar is
        hidden so they don't appear, and the bottom bar + MenuBar stay canonical. -->
   <ContentPage.ToolbarItems>
+    <!-- Dictation cue (#14): a visible mic icon in the Android app bar. Dictation is the OS's own
+         feature (the keyboard mic); tapping focuses the editor + shows a transient how-to hint. -->
+    <ToolbarItem Order="Primary" Clicked="OnDictateClicked" Text="Dictate"
+                 SemanticProperties.Description="Dictate: focus the editor and show how to use your keyboard's mic">
+      <ToolbarItem.IconImageSource>
+        <FontImageSource FontFamily="MaterialIcons" Glyph="&#xF036C;" Color="{DynamicResource OnSurface}" Size="22" />
+      </ToolbarItem.IconImageSource>
+    </ToolbarItem>
     <ToolbarItem Text="New post" Command="{Binding NewPostCommand}" Order="Secondary" Priority="0" />
     <ToolbarItem Text="Open post" Command="{Binding OpenPostCommand}" Order="Secondary" Priority="1" />
     <ToolbarItem Text="Save" Command="{Binding SaveCommand}" Order="Secondary" Priority="2" />
@@ -108,6 +116,18 @@
                          Data="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm0-2h14V7H5zm3.338-3.113Q6.725 14.776 6 13q.725-1.775 2.338-2.887T12 9t3.663 1.113T18 13q-.725 1.775-2.337 2.888T12 17t-3.662-1.112m2.6-1.826Q10.5 13.626 10.5 13t.438-1.062T12 11.5t1.063.438T13.5 13t-.437 1.063T12 14.5t-1.062-.437m2.837.712Q14.5 14.05 14.5 13t-.725-1.775T12 10.5t-1.775.725T9.5 13t.725 1.775T12 15.5t1.775-.725" />
             <Label Text="preview" VerticalOptions="Center" FontFamily="HackRegular" FontSize="13"
                    TextColor="{DynamicResource OnSurface}" />
+          </HorizontalStackLayout>
+          <!-- Dictation cue (#14): tap to focus the editor + show the Win+H hint. mdi-microphone
+               path (theme-reactive Fill), matching the preview/sync icon convention. -->
+          <HorizontalStackLayout Margin="6,0" VerticalOptions="Center"
+                                 ToolTipProperties.Text="Dictate (Win+H)"
+                                 SemanticProperties.Description="Dictate: focus the editor and show how to use Windows dictation">
+            <HorizontalStackLayout.GestureRecognizers>
+              <TapGestureRecognizer Tapped="OnDictateTapped" />
+            </HorizontalStackLayout.GestureRecognizers>
+            <shapes:Path Aspect="Uniform" HeightRequest="16" WidthRequest="16" VerticalOptions="Center"
+                         Fill="{DynamicResource OnSurface}"
+                         Data="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
           </HorizontalStackLayout>
           <Button Text="about" Command="{Binding AboutCommand}"
                   Style="{StaticResource StatusBarButton}"
@@ -197,5 +217,18 @@
         </Grid>
       </Border>
     </Grid>
+
+    <!-- Dictation how-to hint (#14): a transient toast the mic cue fades in, then auto-dismisses.
+         Self-contained (no CommunityToolkit dependency); InputTransparent so it never blocks taps. -->
+    <Border x:Name="DictationHint" IsVisible="False" Opacity="0"
+            BackgroundColor="{StaticResource Ink850}"
+            Padding="14,8" Margin="0,0,0,48"
+            HorizontalOptions="Center" VerticalOptions="End"
+            StrokeThickness="0"
+            StrokeShape="RoundRectangle 6,6,6,6"
+            InputTransparent="True">
+      <Label x:Name="DictationHintLabel" FontFamily="HackRegular" FontSize="13"
+             TextColor="{StaticResource Paper100}" />
+    </Border>
   </Grid>
 </ContentPage>
