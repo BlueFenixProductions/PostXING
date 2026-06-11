@@ -126,6 +126,15 @@ public partial class EditorPage : ContentPage
             await PushPaletteAsync(_themes.CurrentEditorPalette);
             await PushTextAsync(_vm.RawMarkdown);
             await Task.Delay(250);
+#if ANDROID
+            // #65 (data loss): stop blindly re-seeding the moment the editor holds content. Each
+            // push overwrites editor.innerHTML (setTextB64), so a later push clobbers an edit the
+            // user has begun typing — and this loop also re-runs on every OnAppearing (Preview->back).
+            // Once seeded, the dirty-poll is the only editor<->host path: it PULLS edits, never
+            // pushes over them. (A new/empty post has no content to land, so it harmlessly runs out
+            // the loop; its real content arrives later via OnViewModelPropertyChanged.)
+            if (!string.IsNullOrEmpty(await PullEditorTextAsync())) break;
+#endif
         }
     }
 
@@ -316,6 +325,21 @@ public partial class EditorPage : ContentPage
             if (!fromPoll) BridgeLog.Write($"SyncBeforeSave pulled {text.Length} chars");
         }
         catch (Exception ex) { BridgeLog.Write($"SyncBeforeSave threw {ex.GetType().Name}: {ex.Message}"); }
+    }
+
+    // Read the editor's current text without mirroring it into the ViewModel — used by the seed
+    // loop to detect whether the editor already holds content (so it can stop re-seeding, #65).
+    // Returns "" if the eval is unavailable/slow (treated as "no content yet, keep seeding").
+    private async Task<string> PullEditorTextAsync()
+    {
+        try
+        {
+            var evalTask = MainThread.InvokeOnMainThreadAsync(
+                () => EditorWebView.EvaluateJavaScriptAsync("window.PostXING.getText()"));
+            var done = await Task.WhenAny(evalTask, Task.Delay(1500));
+            return done == evalTask ? DecodeEvalString(evalTask.Result) : string.Empty;
+        }
+        catch { return string.Empty; }
     }
 
     // EvaluateJavaScriptAsync returns a JS string JSON-escaped (\n, \", maybe outer-quoted);
